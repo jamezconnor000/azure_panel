@@ -1,5 +1,15 @@
 # Build
 build/
+
+# Executables (built binaries)
+test_*
+example_*
+complete_sdk_demo
+create_azure_configs
+hal_event_export_daemon
+osdp_secure_demo
+!*.c
+!*.h
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake

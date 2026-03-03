@@ -73,7 +73,7 @@ TimeZone_t* AccessLogic_SDK_FindTimeZone(uint16_t timezone_id);
  * @param relay_lpa Relay to control if access granted
  * @return Access decision with grant/deny and reason
  */
-AccessDecision_t AccessLogic_SDK_ProcessCardRead(
+AccessLogicResult_t AccessLogic_SDK_ProcessCardRead(
     uint32_t card_number,
     uint32_t permission_id,
     LPA_t reader_lpa,
@@ -87,7 +87,7 @@ AccessDecision_t AccessLogic_SDK_ProcessCardRead(
  * @param door_number Door number (legacy interface)
  * @return Access decision
  */
-AccessDecision_t AccessLogic_SDK_ProcessCardRead_Simple(
+AccessLogicResult_t AccessLogic_SDK_ProcessCardRead_Simple(
     uint32_t card_number,
     uint8_t door_number
 );
@@ -114,6 +114,6 @@ ErrorCode_t AccessLogic_SDK_SetReaderMode(LPA_t reader_lpa, ReaderMode_t mode);
  *
  * @param decision Access decision to generate event from
  */
-void AccessLogic_SDK_GenerateAccessEvent(AccessDecision_t* decision);
+void AccessLogic_SDK_GenerateAccessEvent(AccessLogicResult_t* decision);
 
 #endif // ACCESS_LOGIC_SDK_H

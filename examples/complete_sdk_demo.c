@@ -27,7 +27,7 @@ void print_header(const char* title) {
     printf("════════════════════════════════════════════════════════════════\n\n");
 }
 
-void print_decision(AccessDecision_t* decision) {
+void print_decision(AccessLogicResult_t* decision) {
     printf("\n┌─────────────────────────────────────────────────────────┐\n");
     printf("│ ACCESS DECISION                                         │\n");
     printf("├─────────────────────────────────────────────────────────┤\n");
@@ -201,7 +201,7 @@ int main() {
 
     // Scenario 1: Employee at front door
     printf("Scenario 1: Employee (100001) swipes at front door\n");
-    AccessDecision_t decision = AccessLogic_SDK_ProcessCardRead(
+    AccessLogicResult_t decision = AccessLogic_SDK_ProcessCardRead(
         100001, 1, reader1, relay1
     );
     print_decision(&decision);

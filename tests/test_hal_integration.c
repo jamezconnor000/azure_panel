@@ -29,24 +29,24 @@ int main() {
     EventManager_Subscribe("Audit", audit_handler);
     
     printf("\n--- Test 1: Valid Card ---\n");
-    AccessDecision_t decision1 = AccessLogic_ProcessCardRead(123456, 1);
-    printf("Decision: %s - %s\n", 
+    AccessLogicResult_t decision1 = AccessLogic_ProcessCardRead(123456, 1);
+    printf("Decision: %s - %s\n",
            decision1.granted ? "GRANTED" : "DENIED",
            decision1.reason);
-    
+
     AccessEvent_t* event1 = AccessEvent_Create(
         decision1.granted ? EVENT_ACCESS_GRANTED : EVENT_ACCESS_DENIED);
     strcpy(event1->cardNumber, "123456");
     event1->doorNumber = 1;
     strcpy(event1->doorName, "Main Entrance");
     event1->granted = decision1.granted;
-    
+
     EventManager_PublishEvent(event1);
-    
+
     printf("\n--- Test 2: Invalid Card ---\n");
-    AccessDecision_t decision2 = AccessLogic_ProcessCardRead(999999, 1);
+    AccessLogicResult_t decision2 = AccessLogic_ProcessCardRead(999999, 1);
     printf("Decision: %s - %s\n",
-           decision2.granted ? "GRANTED" : "DENIED", 
+           decision2.granted ? "GRANTED" : "DENIED",
            decision2.reason);
     
     AccessEvent_t* event2 = AccessEvent_Create(EVENT_ACCESS_DENIED);

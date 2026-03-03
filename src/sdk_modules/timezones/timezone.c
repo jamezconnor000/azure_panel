@@ -2,6 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+// =============================================================================
+// TimeZone Registry - In-memory storage
+// =============================================================================
+
+#define MAX_TIMEZONES 256
+
+static TimeZone_t* g_timezones[MAX_TIMEZONES];
+static int g_timezone_count = 0;
+
 /*
  * TimeInterval Implementation
  */
@@ -305,4 +314,86 @@ int TimeInterval_EvaluateMonthlyAtDay(TimeInterval_t* interval, time_t current_t
     }
     
     return 1;  // No specific occurrence requirement
+}
+
+// =============================================================================
+// TimeZone Registry Functions
+// =============================================================================
+
+ErrorCode_t TimeZone_Register(TimeZone_t* tz) {
+    if (!tz) {
+        return ErrorCode_BadParams;
+    }
+
+    // Check if already registered
+    for (int i = 0; i < g_timezone_count; i++) {
+        if (g_timezones[i] && g_timezones[i]->Id == tz->Id) {
+            // Replace existing
+            TimeZone_Destroy(g_timezones[i]);
+            g_timezones[i] = tz;
+            return ErrorCode_OK;
+        }
+    }
+
+    if (g_timezone_count >= MAX_TIMEZONES) {
+        return ErrorCode_OutOfMemory;
+    }
+
+    g_timezones[g_timezone_count++] = tz;
+    return ErrorCode_OK;
+}
+
+TimeZone_t* TimeZone_GetById(uint16_t id) {
+    // Handle special constants
+    if (id == TimeZoneConsts_Null || id == TimeZoneConsts_Never || id == TimeZoneConsts_Always) {
+        // Return a static timezone for these constants
+        static TimeZone_t tz_never = { .Id = TimeZoneConsts_Never };
+        static TimeZone_t tz_always = { .Id = TimeZoneConsts_Always };
+
+        if (id == TimeZoneConsts_Never) return &tz_never;
+        if (id == TimeZoneConsts_Always) return &tz_always;
+        return NULL;
+    }
+
+    for (int i = 0; i < g_timezone_count; i++) {
+        if (g_timezones[i] && g_timezones[i]->Id == id) {
+            return g_timezones[i];
+        }
+    }
+
+    return NULL;
+}
+
+int TimeZone_IsActiveById(uint16_t tz_id, time_t current_time, uint32_t holiday_types) {
+    // Handle special cases
+    if (tz_id == TimeZoneConsts_Null || tz_id == 0) {
+        return 0;  // Null timezone is never active
+    }
+    if (tz_id == TimeZoneConsts_Never) {
+        return 0;  // Never active
+    }
+    if (tz_id == TimeZoneConsts_Always) {
+        return 1;  // Always active
+    }
+
+    TimeZone_t* tz = TimeZone_GetById(tz_id);
+    if (!tz) {
+        return 0;  // Unknown timezone
+    }
+
+    return TimeZone_IsActive(tz, current_time, holiday_types);
+}
+
+void TimeZone_UnregisterAll(void) {
+    for (int i = 0; i < g_timezone_count; i++) {
+        if (g_timezones[i]) {
+            TimeZone_Destroy(g_timezones[i]);
+            g_timezones[i] = NULL;
+        }
+    }
+    g_timezone_count = 0;
+}
+
+int TimeZone_GetCount(void) {
+    return g_timezone_count;
 }

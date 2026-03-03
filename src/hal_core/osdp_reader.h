@@ -246,6 +246,25 @@ bool OSDP_Reader_HasEvents(OSDP_Reader_t* reader);
 ErrorCode_t OSDP_Reader_GetEvent(OSDP_Reader_t* reader, OSDP_Event_Type_t* event_type,
                                   OSDP_Card_Data_t* card_data);
 
+/**
+ * Queue an event for the OSDP reader (internal use)
+ *
+ * @param reader Reader handle
+ * @param event_type Event type to queue
+ * @param card_data Card data (may be NULL)
+ * @return ErrorCode_OK on success, error code otherwise
+ */
+ErrorCode_t OSDP_Reader_QueueEvent(OSDP_Reader_t* reader, OSDP_Event_Type_t event_type,
+                                    const OSDP_Card_Data_t* card_data);
+
+/**
+ * Get number of pending events
+ *
+ * @param reader Reader handle
+ * @return Number of events in queue
+ */
+uint8_t OSDP_Reader_GetEventCount(OSDP_Reader_t* reader);
+
 // =============================================================================
 // OSDP Status
 // =============================================================================

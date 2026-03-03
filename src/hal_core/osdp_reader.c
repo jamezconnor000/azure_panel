@@ -14,6 +14,115 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/time.h>
+#include <pthread.h>
+
+// =============================================================================
+// Event Queue Implementation
+// =============================================================================
+
+typedef struct {
+    OSDP_Event_Type_t event_type;
+    OSDP_Card_Data_t card_data;
+    uint64_t timestamp;
+} OSDP_QueuedEvent_t;
+
+typedef struct {
+    OSDP_QueuedEvent_t events[OSDP_QUEUE_SIZE];
+    uint8_t head;           // Next read position
+    uint8_t tail;           // Next write position
+    uint8_t count;          // Number of events in queue
+    pthread_mutex_t mutex;  // Thread safety
+} OSDP_EventQueue_t;
+
+static OSDP_EventQueue_t* EventQueue_Create(void) {
+    OSDP_EventQueue_t* queue = (OSDP_EventQueue_t*)calloc(1, sizeof(OSDP_EventQueue_t));
+    if (queue) {
+        queue->head = 0;
+        queue->tail = 0;
+        queue->count = 0;
+        pthread_mutex_init(&queue->mutex, NULL);
+    }
+    return queue;
+}
+
+static void EventQueue_Destroy(OSDP_EventQueue_t* queue) {
+    if (queue) {
+        pthread_mutex_destroy(&queue->mutex);
+        free(queue);
+    }
+}
+
+static bool EventQueue_Push(OSDP_EventQueue_t* queue, OSDP_Event_Type_t event_type,
+                            const OSDP_Card_Data_t* card_data, uint64_t timestamp) {
+    if (!queue) return false;
+
+    pthread_mutex_lock(&queue->mutex);
+
+    if (queue->count >= OSDP_QUEUE_SIZE) {
+        // Queue full - drop oldest event
+        queue->head = (queue->head + 1) % OSDP_QUEUE_SIZE;
+        queue->count--;
+    }
+
+    OSDP_QueuedEvent_t* event = &queue->events[queue->tail];
+    event->event_type = event_type;
+    event->timestamp = timestamp;
+    if (card_data) {
+        memcpy(&event->card_data, card_data, sizeof(OSDP_Card_Data_t));
+    } else {
+        memset(&event->card_data, 0, sizeof(OSDP_Card_Data_t));
+    }
+
+    queue->tail = (queue->tail + 1) % OSDP_QUEUE_SIZE;
+    queue->count++;
+
+    pthread_mutex_unlock(&queue->mutex);
+    return true;
+}
+
+static bool EventQueue_Pop(OSDP_EventQueue_t* queue, OSDP_Event_Type_t* event_type,
+                           OSDP_Card_Data_t* card_data) {
+    if (!queue || !event_type) return false;
+
+    pthread_mutex_lock(&queue->mutex);
+
+    if (queue->count == 0) {
+        pthread_mutex_unlock(&queue->mutex);
+        return false;
+    }
+
+    OSDP_QueuedEvent_t* event = &queue->events[queue->head];
+    *event_type = event->event_type;
+    if (card_data) {
+        memcpy(card_data, &event->card_data, sizeof(OSDP_Card_Data_t));
+    }
+
+    queue->head = (queue->head + 1) % OSDP_QUEUE_SIZE;
+    queue->count--;
+
+    pthread_mutex_unlock(&queue->mutex);
+    return true;
+}
+
+static bool EventQueue_HasEvents(OSDP_EventQueue_t* queue) {
+    if (!queue) return false;
+
+    pthread_mutex_lock(&queue->mutex);
+    bool has_events = (queue->count > 0);
+    pthread_mutex_unlock(&queue->mutex);
+
+    return has_events;
+}
+
+static uint8_t EventQueue_Count(OSDP_EventQueue_t* queue) {
+    if (!queue) return 0;
+
+    pthread_mutex_lock(&queue->mutex);
+    uint8_t count = queue->count;
+    pthread_mutex_unlock(&queue->mutex);
+
+    return count;
+}
 
 // =============================================================================
 // Private Helper Functions
@@ -225,7 +334,7 @@ OSDP_Reader_t* OSDP_Reader_Create(LPA_t lpa, const OSDP_Config_t* config) {
     reader->state = OSDP_STATE_INIT;
     reader->sequence = 0;
     reader->fd = -1;
-    reader->event_queue = NULL; // TODO: Implement queue
+    reader->event_queue = EventQueue_Create();  // Initialize event queue
     reader->sc_ctx = NULL;  // Secure channel context (initialized on demand)
     reader->packets_sent = 0;
     reader->packets_received = 0;
@@ -255,6 +364,12 @@ OSDP_Reader_t* OSDP_Reader_Create(LPA_t lpa, const OSDP_Config_t* config) {
 void OSDP_Reader_Destroy(OSDP_Reader_t* reader) {
     if (reader) {
         OSDP_Reader_Close(reader);
+
+        // Free event queue
+        if (reader->event_queue) {
+            EventQueue_Destroy((OSDP_EventQueue_t*)reader->event_queue);
+            reader->event_queue = NULL;
+        }
 
         // Free secure channel context
         if (reader->sc_ctx) {
@@ -393,11 +508,56 @@ ErrorCode_t OSDP_Reader_Poll(OSDP_Reader_t* reader) {
         return err;
     }
 
-    if (reply == OSDP_ACK) {
-        reader->state = OSDP_STATE_ONLINE;
-        reader->last_poll_time = get_time_ms();
-    } else if (reply == OSDP_NAK) {
-        reader->state = OSDP_STATE_ERROR;
+    reader->last_poll_time = get_time_ms();
+
+    switch (reply) {
+        case OSDP_ACK:
+            // No events pending
+            if (reader->state != OSDP_STATE_SECURE) {
+                reader->state = OSDP_STATE_ONLINE;
+            }
+            break;
+
+        case OSDP_RAW:
+        case OSDP_FMT:
+            // Card read event - queue it
+            if (data_len >= 4 && reader->event_queue) {
+                OSDP_Card_Data_t card_data = {0};
+                card_data.reader = data[0];
+                card_data.format = data[1];
+                card_data.bit_count = data[2] | (data[3] << 8);
+
+                uint16_t byte_count = (card_data.bit_count + 7) / 8;
+                if (byte_count > 64) byte_count = 64;
+                if (data_len >= 4 + byte_count) {
+                    memcpy(card_data.data, &data[4], byte_count);
+                }
+
+                OSDP_Reader_QueueEvent(reader, OSDP_EVENT_CARD_READ, &card_data);
+            }
+            if (reader->state != OSDP_STATE_SECURE) {
+                reader->state = OSDP_STATE_ONLINE;
+            }
+            break;
+
+        case OSDP_KEYPPAD:
+            // Keypress event
+            if (reader->event_queue) {
+                OSDP_Reader_QueueEvent(reader, OSDP_EVENT_KEYPRESS, NULL);
+            }
+            break;
+
+        case OSDP_NAK:
+            reader->state = OSDP_STATE_ERROR;
+            break;
+
+        case OSDP_BUSY:
+            // Reader is busy, try again later
+            break;
+
+        default:
+            // Other replies - maintain state
+            break;
     }
 
     return ErrorCode_OK;
@@ -586,14 +746,51 @@ ErrorCode_t OSDP_Reader_PulseOutput(OSDP_Reader_t* reader, uint8_t output_number
 // =============================================================================
 
 bool OSDP_Reader_HasEvents(OSDP_Reader_t* reader) {
-    // TODO: Implement event queue
-    return false;
+    if (!reader || !reader->event_queue) {
+        return false;
+    }
+    return EventQueue_HasEvents((OSDP_EventQueue_t*)reader->event_queue);
 }
 
 ErrorCode_t OSDP_Reader_GetEvent(OSDP_Reader_t* reader, OSDP_Event_Type_t* event_type,
                                   OSDP_Card_Data_t* card_data) {
-    // TODO: Implement event queue
+    if (!reader || !event_type) {
+        return ErrorCode_BadParams;
+    }
+
+    if (!reader->event_queue) {
+        return ErrorCode_InvalidState;
+    }
+
+    if (EventQueue_Pop((OSDP_EventQueue_t*)reader->event_queue, event_type, card_data)) {
+        return ErrorCode_OK;
+    }
+
     return ErrorCode_ObjectNotFound;
+}
+
+ErrorCode_t OSDP_Reader_QueueEvent(OSDP_Reader_t* reader, OSDP_Event_Type_t event_type,
+                                    const OSDP_Card_Data_t* card_data) {
+    if (!reader) {
+        return ErrorCode_BadParams;
+    }
+
+    if (!reader->event_queue) {
+        return ErrorCode_InvalidState;
+    }
+
+    if (EventQueue_Push((OSDP_EventQueue_t*)reader->event_queue, event_type, card_data, get_time_ms())) {
+        return ErrorCode_OK;
+    }
+
+    return ErrorCode_Failed;
+}
+
+uint8_t OSDP_Reader_GetEventCount(OSDP_Reader_t* reader) {
+    if (!reader || !reader->event_queue) {
+        return 0;
+    }
+    return EventQueue_Count((OSDP_EventQueue_t*)reader->event_queue);
 }
 
 // =============================================================================

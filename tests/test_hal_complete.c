@@ -25,23 +25,23 @@ int main() {
     printf("\n--- Simulating Card Swipe ---\n");
     printf("Card 123456 swiped at Door 1\n");
     
-    AccessDecision_t decision = AccessLogic_ProcessCardRead(123456, 1);
+    AccessLogicResult_t decision = AccessLogic_ProcessCardRead(123456, 1);
     printf("Access Decision: %s - %s\n",
            decision.granted ? "GRANTED" : "DENIED",
            decision.reason);
-    
+
     if(decision.granted) {
         Relay_Unlock(1, 5000);
     }
-    
+
     AccessEvent_t* event = AccessEvent_Create(
         decision.granted ? EVENT_ACCESS_GRANTED : EVENT_ACCESS_DENIED);
     strcpy(event->cardNumber, "123456");
     event->doorNumber = 1;
     event->granted = decision.granted;
-    
+
     EventManager_PublishEvent(event);
-    
+
     if(decision.granted) {
         printf("\nDOOR UNLOCKED - Person can enter\n");
         printf("Ambient.ai will now monitor video for tailgating\n");

@@ -123,8 +123,10 @@ target_link_libraries(event_database SQLite::SQLite3)
 add_executable(test_hal_with_db tests/test_hal_with_db.c)
 target_link_libraries(test_hal_with_db hal_core access_event relay event_database SQLite::SQLite3)
 
-add_library(config src/hal_core/config.c)
+add_library(config src/hal_core/config.c src/utils/cJSON.c)
+target_link_libraries(config hal_core)
 add_executable(test_config tests/test_config.c)
+target_link_libraries(test_config config hal_core)
 
 # SDK Module Tests
 add_executable(test_sdk_permissions tests/test_sdk_permissions.c)

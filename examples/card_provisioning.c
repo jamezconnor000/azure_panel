@@ -4,7 +4,7 @@
 int main() {
     printf("HAL Card Provisioning Example\\n");
     
-    HALConfig_t config = { .event_buffer_size = 100000, .log_level = 6 };
+    HAL_RuntimeConfig_t config = { .event_buffer_size = 100000, .log_level = 6 };
     HAL_t* hal = HAL_Create(&config);
     HAL_Connect(hal, "localhost", 5000);
     

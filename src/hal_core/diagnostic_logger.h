@@ -180,6 +180,43 @@ void Diagnostic_RecordHealth(const SystemHealth_t* health);
 ErrorCode_t Diagnostic_GetHealth(SystemHealth_t* health);
 
 /**
+ * Update health status - database connection
+ * @param connected True if database is connected
+ */
+void Diagnostic_SetDatabaseConnected(bool connected);
+
+/**
+ * Update health status - API server
+ * @param running True if API server is running
+ */
+void Diagnostic_SetAPIServerRunning(bool running);
+
+/**
+ * Update health status - Event export daemon
+ * @param running True if event export is running
+ */
+void Diagnostic_SetEventExportRunning(bool running);
+
+/**
+ * Update reader status counts
+ * @param total Total number of readers
+ * @param online Number of online readers
+ * @param offline Number of offline readers
+ */
+void Diagnostic_UpdateReaderStatus(uint32_t total, uint32_t online, uint32_t offline);
+
+/**
+ * Update pending events count
+ * @param count Number of events pending export
+ */
+void Diagnostic_SetEventsPending(uint32_t count);
+
+/**
+ * Increment error counter (for errors_last_hour tracking)
+ */
+void Diagnostic_IncrementErrors(void);
+
+/**
  * Flush all pending log entries to disk
  */
 void Diagnostic_Flush(void);

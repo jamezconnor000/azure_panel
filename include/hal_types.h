@@ -1,6 +1,7 @@
 #ifndef HAL_TYPES_H
 #define HAL_TYPES_H
 #include <stdint.h>
+#include <stdbool.h>
 #include <time.h>
 
 typedef uint8_t LPAType_t;
@@ -29,7 +30,7 @@ typedef struct {
     uint8_t is_blocked;
 } Card_t;
 
-typedef enum { EventType_AccessGrant=0, EventType_AccessDeny=1, EventType_Input=4, EventType_Reader=5, EventType_Relay=6 } EventType_t;
+typedef enum { EventType_AccessGrant=0, EventType_AccessDeny=1, EventType_AccPoint=3, EventType_Input=4, EventType_Reader=5, EventType_Relay=6 } EventType_t;
 
 typedef struct {
     uint32_t serial_number;
@@ -43,6 +44,17 @@ typedef struct {
 
 typedef struct { EventHeader_t header; CardId_t card_id; uint8_t card_format_id; FacilityCode_t facility_code; } AccessGrantEvent_t;
 typedef struct { EventHeader_t header; CardId_t card_id; DenyReason_t reason; uint8_t card_format_id; FacilityCode_t facility_code; } AccessDenyEvent_t;
+
+// Generic HAL event structure (for internal event buffer)
+typedef struct {
+    EventHeader_t header;
+    uint32_t serial_number;
+    CardId_t card_id;
+    uint8_t card_format_id;
+    FacilityCode_t facility_code;
+    DenyReason_t deny_reason;
+    uint8_t data[64];          // Generic data payload
+} HAL_Event_t;
 
 typedef enum { KCMFTA_Unknown=0, KCMFTA_Alarm=1, KCMFTA_Tamper=2, KCMFTA_Fault=4, KCMFTA_Masked=8 } KCMFTA_t;
 typedef enum {
@@ -60,10 +72,19 @@ typedef enum {
     ErrorCode_AuthFailed=30
 } ErrorCode_t;
 
-typedef struct { uint32_t event_buffer_size; uint32_t max_events_before_ack; uint32_t connection_timeout_ms; uint8_t log_level; } HALConfig_t;
+typedef struct { uint32_t event_buffer_size; uint32_t max_events_before_ack; uint32_t connection_timeout_ms; uint8_t log_level; } HAL_RuntimeConfig_t;
 typedef struct { uint8_t max_events_before_ack; uint8_t src_node; uint32_t start_event_serial_number; } EventSubscription_t;
 typedef struct { uint32_t ack_serial_number; uint8_t dst_node; uint8_t src_node; } EventAck_t;
-typedef struct { uint32_t total_events; uint32_t buffer_size; uint32_t last_ack_serial; uint32_t last_event_serial; uint8_t connection_status; } EventBufferStatus_t;
+typedef struct {
+    uint32_t total_events;
+    uint32_t buffer_size;
+    uint32_t last_ack_serial;
+    uint32_t last_event_serial;
+    uint8_t connection_status;
+    uint32_t total_capacity;
+    uint32_t events_pending;
+    uint32_t events_available;
+} EventBufferStatus_t;
 typedef struct { AccessDecision_t decision; DenyReason_t deny_reason; uint32_t strike_time_ms; uint32_t relay_id; } AccessResult_t;
 
 #endif

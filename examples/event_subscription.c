@@ -4,7 +4,7 @@
 int main() {
     printf("HAL Event Subscription Example\\n");
     
-    HALConfig_t config = {
+    HAL_RuntimeConfig_t config = {
         .event_buffer_size = 100000,
         .max_events_before_ack = 50,
         .connection_timeout_ms = 5000,

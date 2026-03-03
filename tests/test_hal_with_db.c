@@ -31,21 +31,21 @@ int main() {
     EventManager_Subscribe("Ambient.ai", ambient_handler);
     
     printf("\n--- Test 1: Valid Card ---\n");
-    AccessDecision_t decision = AccessLogic_ProcessCardRead(123456, 1);
-    
+    AccessLogicResult_t decision = AccessLogic_ProcessCardRead(123456, 1);
+
     if(decision.granted) {
         Relay_Unlock(1, 5000);
     }
-    
+
     AccessEvent_t* event1 = AccessEvent_Create(
         decision.granted ? EVENT_ACCESS_GRANTED : EVENT_ACCESS_DENIED);
     sprintf(event1->eventId, "evt-%ld-001", time(NULL));
     strcpy(event1->cardNumber, "123456");
     event1->doorNumber = 1;
     event1->granted = decision.granted;
-    
+
     EventManager_PublishEvent(event1);
-    
+
     printf("\n--- Test 2: Invalid Card ---\n");
     decision = AccessLogic_ProcessCardRead(999999, 2);
     

@@ -72,7 +72,7 @@ ErrorCode_t AccessLogic_SDK_Initialize(void) {
 // =============================================================================
 
 ErrorCode_t AccessLogic_SDK_AddPermission(Permission_t* permission) {
-    if (!g_sdk_logic || !permission) return ErrorCode_BadParameters;
+    if (!g_sdk_logic || !permission) return ErrorCode_BadParams;
 
     g_sdk_logic->permissions = (Permission_t**)realloc(
         g_sdk_logic->permissions,
@@ -100,7 +100,7 @@ Permission_t* AccessLogic_SDK_FindPermission(uint32_t permission_id) {
 // =============================================================================
 
 ErrorCode_t AccessLogic_SDK_AddTimeZone(TimeZone_t* timezone) {
-    if (!g_sdk_logic || !timezone) return ErrorCode_BadParameters;
+    if (!g_sdk_logic || !timezone) return ErrorCode_BadParams;
 
     g_sdk_logic->timezones = (TimeZone_t**)realloc(
         g_sdk_logic->timezones,
@@ -140,13 +140,13 @@ TimeZone_t* AccessLogic_SDK_FindTimeZone(uint16_t timezone_id) {
  * 7. Make final decision
  * 8. Control relay if granted
  */
-AccessDecision_t AccessLogic_SDK_ProcessCardRead(
+AccessLogicResult_t AccessLogic_SDK_ProcessCardRead(
     uint32_t card_number,
     uint32_t permission_id,
     LPA_t reader_lpa,
     LPA_t relay_lpa
 ) {
-    AccessDecision_t decision = {0};
+    AccessLogicResult_t decision = {0};
     decision.card_number = card_number;
     decision.granted = false;
     decision.timestamp = time(NULL);
@@ -223,7 +223,7 @@ AccessDecision_t AccessLogic_SDK_ProcessCardRead(
 /**
  * Simplified access decision for backward compatibility
  */
-AccessDecision_t AccessLogic_SDK_ProcessCardRead_Simple(
+AccessLogicResult_t AccessLogic_SDK_ProcessCardRead_Simple(
     uint32_t card_number,
     uint8_t door_number
 ) {
@@ -270,7 +270,7 @@ ErrorCode_t AccessLogic_SDK_SetReaderMode(LPA_t reader_lpa, ReaderMode_t mode) {
 // Event Generation
 // =============================================================================
 
-void AccessLogic_SDK_GenerateAccessEvent(AccessDecision_t* decision) {
+void AccessLogic_SDK_GenerateAccessEvent(AccessLogicResult_t* decision) {
     if (!decision) return;
 
     AccessEventType_t event_type = decision->granted ?

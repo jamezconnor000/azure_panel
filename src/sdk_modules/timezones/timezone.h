@@ -140,4 +140,43 @@ int TimeInterval_EvaluateAnnually(TimeInterval_t* interval, time_t current_time)
  */
 int TimeInterval_EvaluateMonthlyAtDay(TimeInterval_t* interval, time_t current_time);
 
+// =============================================================================
+// Time Zone Registry Functions
+// =============================================================================
+
+/**
+ * Register a timezone in the global registry
+ * @param tz Timezone to register (takes ownership)
+ * @return ErrorCode_OK on success
+ */
+ErrorCode_t TimeZone_Register(TimeZone_t* tz);
+
+/**
+ * Get timezone by ID from registry
+ * @param id Timezone ID
+ * @return Timezone pointer or NULL if not found
+ */
+TimeZone_t* TimeZone_GetById(uint16_t id);
+
+/**
+ * Check if a timezone is currently active by ID
+ * Handles special timezone constants (Never, Always)
+ * @param tz_id Timezone ID
+ * @param current_time Current Unix timestamp
+ * @param holiday_types Current holiday types bit field
+ * @return 1 if active, 0 if not
+ */
+int TimeZone_IsActiveById(uint16_t tz_id, time_t current_time, uint32_t holiday_types);
+
+/**
+ * Unregister all timezones (cleanup)
+ */
+void TimeZone_UnregisterAll(void);
+
+/**
+ * Get count of registered timezones
+ * @return Number of timezones in registry
+ */
+int TimeZone_GetCount(void);
+
 #endif // SDK_TIMEZONE_H

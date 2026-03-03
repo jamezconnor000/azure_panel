@@ -1,4 +1,5 @@
 #include "relay.h"
+#include "../timezones/timezone.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -398,16 +399,53 @@ void Relay_ProcessEvent(LPA_t source, uint16_t event_type, uint16_t event_subtyp
     }
 }
 
+// Track previous timezone state for edge detection
+static bool g_relay_tz_was_active[MAX_RELAYS] = {false};
+
 void Relay_EvaluateTimezones(void) {
-    // This would integrate with TimeZone module
-    // For now, just a placeholder
+    time_t now = time(NULL);
+    uint32_t holiday_types = 0;  // Would come from holiday module
+
     for (int i = 0; i < g_relay_count; i++) {
         Relay_t* relay = g_relays[i];
-        if (relay->CtrlTimeZone != 0) {
-            // TODO: Check if timezone is active
-            // If active and RelayFlags_OnWhileTZActive, turn on
-            // If timezone just started and RelayFlags_PulseAtTZStart, pulse
-            // etc.
+        if (!relay || relay->CtrlTimeZone == 0) {
+            continue;
         }
+
+        bool tz_active = TimeZone_IsActiveById(relay->CtrlTimeZone, now, holiday_types) != 0;
+        bool was_active = g_relay_tz_was_active[i];
+
+        // Detect timezone start (edge: inactive -> active)
+        bool tz_just_started = tz_active && !was_active;
+        bool tz_just_ended = !tz_active && was_active;
+
+        // Update state for next evaluation
+        g_relay_tz_was_active[i] = tz_active;
+
+        // Process relay flags
+        if (relay->Flags & RelayFlags_OnWhileTZActive) {
+            // Stay on while timezone is active
+            if (tz_active && relay->CurrentState != RelayState_On) {
+                Relay_ExecuteControl(relay->Id, RelayControlOperation_ON);
+            } else if (!tz_active && relay->CurrentState == RelayState_On) {
+                Relay_ExecuteControl(relay->Id, RelayControlOperation_OFF);
+            }
+        }
+
+        if (relay->Flags & RelayFlags_PulseAtTZStart) {
+            // Pulse when timezone becomes active
+            if (tz_just_started) {
+                Relay_ExecuteControl(relay->Id, RelayControlOperation_PULSE);
+            }
+        }
+
+        if (relay->Flags & RelayFlags_PulseAtTZEnd) {
+            // Pulse when timezone becomes inactive
+            if (tz_just_ended) {
+                Relay_ExecuteControl(relay->Id, RelayControlOperation_PULSE);
+            }
+        }
+
+        // RelayFlags_Latching, RelayFlags_FailSecure, RelayFlags_FailSafe are handled elsewhere
     }
 }

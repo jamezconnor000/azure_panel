@@ -99,7 +99,7 @@ ErrorCode_t EventExporter_Start(EventExporter_t* exporter, const char* hal_addre
     if (!exporter) return ErrorCode_BadParams;
 
     // Create HAL instance
-    HALConfig_t hal_config = {
+    HAL_RuntimeConfig_t hal_config = {
         .event_buffer_size = 100000,
         .max_events_before_ack = exporter->config.batch_size,
         .connection_timeout_ms = exporter->config.timeout_seconds * 1000,
@@ -310,16 +310,42 @@ int EventExporter_ProcessEvents(EventExporter_t* exporter) {
         return -1;
     }
 
-    // This is a simplified version - in real implementation,
-    // you would call HAL_GetEvents() to retrieve events
-    // For now, we simulate with a placeholder
+    // Retrieve events from HAL
+    HAL_Event_t event;
+    int events_processed = 0;
 
-    // TODO: Integrate with actual HAL event retrieval when available
-    // For demonstration, we'll show the structure
+    while (HAL_GetNextEvent(exporter->hal, &event) == ErrorCode_OK) {
+        // Allocate and copy event for batch
+        HAL_Event_t* event_copy = (HAL_Event_t*)malloc(sizeof(HAL_Event_t));
+        if (!event_copy) {
+            printf("ERROR: Failed to allocate event copy\n");
+            break;
+        }
+        memcpy(event_copy, &event, sizeof(HAL_Event_t));
 
-    printf("Polling for events...\n");
+        // Add to batch
+        if (exporter->batch.count < exporter->batch.capacity) {
+            exporter->batch.events[exporter->batch.count++] = event_copy;
+            events_processed++;
+        } else {
+            // Batch full - send it first
+            ErrorCode_t result = SendBatch(exporter);
+            if (result != ErrorCode_OK) {
+                printf("ERROR: Failed to send batch\n");
+                free(event_copy);
+                return -1;
+            }
 
-    // If batch is full, send it
+            // Add event to new batch
+            exporter->batch.events[exporter->batch.count++] = event_copy;
+            events_processed++;
+        }
+
+        // Track last serial number
+        exporter->last_serial = event.serial_number;
+    }
+
+    // If batch is full or has events and we've been idle, send it
     if (exporter->batch.count >= exporter->batch.capacity) {
         ErrorCode_t result = SendBatch(exporter);
         if (result != ErrorCode_OK) {
@@ -328,7 +354,7 @@ int EventExporter_ProcessEvents(EventExporter_t* exporter) {
         }
     }
 
-    return exporter->batch.count;
+    return events_processed;
 }
 
 ErrorCode_t EventExporter_GetStats(EventExporter_t* exporter, ExportStats_t* stats) {

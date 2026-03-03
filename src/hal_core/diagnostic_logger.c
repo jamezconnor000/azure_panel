@@ -471,12 +471,114 @@ void Diagnostic_RecordHealth(const SystemHealth_t* health) {
               health->errors_last_hour);
 }
 
+// Global state for health tracking (set by external components)
+static SystemHealth_t g_system_health = {0};
+static pthread_mutex_t g_health_mutex = PTHREAD_MUTEX_INITIALIZER;
+static uint64_t g_start_time_ms = 0;
+static uint32_t g_error_count = 0;
+static uint64_t g_error_window_start = 0;
+
+void Diagnostic_SetDatabaseConnected(bool connected) {
+    pthread_mutex_lock(&g_health_mutex);
+    g_system_health.database_connected = connected;
+    pthread_mutex_unlock(&g_health_mutex);
+}
+
+void Diagnostic_SetAPIServerRunning(bool running) {
+    pthread_mutex_lock(&g_health_mutex);
+    g_system_health.api_server_running = running;
+    pthread_mutex_unlock(&g_health_mutex);
+}
+
+void Diagnostic_SetEventExportRunning(bool running) {
+    pthread_mutex_lock(&g_health_mutex);
+    g_system_health.event_export_running = running;
+    pthread_mutex_unlock(&g_health_mutex);
+}
+
+void Diagnostic_UpdateReaderStatus(uint32_t total, uint32_t online, uint32_t offline) {
+    pthread_mutex_lock(&g_health_mutex);
+    g_system_health.reader_count = total;
+    g_system_health.readers_online = online;
+    g_system_health.readers_offline = offline;
+    pthread_mutex_unlock(&g_health_mutex);
+}
+
+void Diagnostic_SetEventsPending(uint32_t count) {
+    pthread_mutex_lock(&g_health_mutex);
+    g_system_health.events_pending = count;
+    pthread_mutex_unlock(&g_health_mutex);
+}
+
+void Diagnostic_IncrementErrors(void) {
+    pthread_mutex_lock(&g_health_mutex);
+
+    uint64_t now = get_timestamp_ms();
+
+    // Reset error count if window has passed (1 hour = 3600000 ms)
+    if (now - g_error_window_start > 3600000) {
+        g_error_count = 0;
+        g_error_window_start = now;
+    }
+
+    g_error_count++;
+    g_system_health.errors_last_hour = g_error_count;
+
+    pthread_mutex_unlock(&g_health_mutex);
+}
+
 ErrorCode_t Diagnostic_GetHealth(SystemHealth_t* health) {
     if (!health) {
         return ErrorCode_BadParams;
     }
 
-    // TODO: Implement actual health checking
-    memset(health, 0, sizeof(SystemHealth_t));
+    pthread_mutex_lock(&g_health_mutex);
+
+    // Copy current health state
+    memcpy(health, &g_system_health, sizeof(SystemHealth_t));
+
+    // Calculate uptime
+    if (g_start_time_ms == 0) {
+        g_start_time_ms = get_timestamp_ms();
+    }
+    health->uptime_seconds = (get_timestamp_ms() - g_start_time_ms) / 1000;
+
+    // Get CPU and memory usage (platform-specific, simplified here)
+#ifdef __APPLE__
+    // macOS: Use simpler approximation
+    health->cpu_usage_percent = 0.0f;  // Would need sysctl or host_statistics
+    health->memory_usage_mb = 0.0f;    // Would need mach calls
+#else
+    // Linux: Read from /proc
+    FILE* stat_file = fopen("/proc/stat", "r");
+    if (stat_file) {
+        // Simple CPU usage approximation
+        unsigned long user, nice, system, idle;
+        if (fscanf(stat_file, "cpu %lu %lu %lu %lu", &user, &nice, &system, &idle) == 4) {
+            unsigned long total = user + nice + system + idle;
+            unsigned long active = user + nice + system;
+            if (total > 0) {
+                health->cpu_usage_percent = (float)active / (float)total * 100.0f;
+            }
+        }
+        fclose(stat_file);
+    }
+
+    FILE* mem_file = fopen("/proc/self/status", "r");
+    if (mem_file) {
+        char line[256];
+        while (fgets(line, sizeof(line), mem_file)) {
+            unsigned long vm_rss;
+            if (sscanf(line, "VmRSS: %lu", &vm_rss) == 1) {
+                health->memory_usage_mb = (float)vm_rss / 1024.0f;
+                break;
+            }
+        }
+        fclose(mem_file);
+    }
+#endif
+
+    pthread_mutex_unlock(&g_health_mutex);
+
     return ErrorCode_OK;
 }
