@@ -841,9 +841,580 @@ async def get_system_info():
             "audit_trail": True,
             "pacs_integration": True,
             "export_csv": True,
-            "export_json": True
+            "export_json": True,
+            "simulation": True,
+            "diagnostics": True
         }
     }
+
+
+# =============================================================================
+# HAL Configuration & Testing Endpoints
+# =============================================================================
+
+class DoorConfigRequest(BaseModel):
+    """Door configuration update"""
+    door_name: Optional[str] = None
+    location: Optional[str] = None
+    reader_address: Optional[int] = None
+    reader_mode: Optional[int] = None
+    strike_relay_id: Optional[int] = None
+    strike_time_ms: Optional[int] = None
+    held_open_time_ms: Optional[int] = None
+    osdp_enabled: Optional[bool] = None
+
+
+class DoorCreateRequest(BaseModel):
+    """Door creation request"""
+    id: Optional[int] = None
+    door_name: str
+    location: str = ""
+    reader_address: int = 0
+    strike_relay_id: Optional[int] = None
+    strike_time_ms: int = 3000
+    osdp_enabled: bool = False
+
+
+class TimezoneIntervalRequest(BaseModel):
+    """Timezone interval definition"""
+    day_of_week: int = 0  # 0-6 for specific day, or bitmask for multiple
+    start_time: int = 0   # Seconds from midnight (0 = 00:00:00)
+    end_time: int = 86399 # Seconds from midnight (86399 = 23:59:59)
+    recurrence_type: int = 0
+    holiday_types: int = 0
+
+
+class TimezoneCreateRequest(BaseModel):
+    """Timezone creation request"""
+    id: Optional[int] = None
+    name: str
+    description: str = ""
+    intervals: List[TimezoneIntervalRequest] = []
+
+
+class HolidayCreateRequest(BaseModel):
+    """Holiday creation request"""
+    date: int  # YYYYMMDD format (e.g., 20261225)
+    name: str = ""
+    holiday_type: int = 1
+
+
+class AccessDecisionTestRequest(BaseModel):
+    """Access decision test request"""
+    card_number: str
+    door_id: int
+    reader_id: int = 1
+    direction: str = "entry"
+
+
+class CardReadSimulationRequest(BaseModel):
+    """Card read simulation request"""
+    card_number: str
+    door_id: int = 1
+    reader_id: int = 1
+    facility_code: int = 0
+
+
+class EventSimulationRequest(BaseModel):
+    """Event simulation request"""
+    event_type: int
+    card_number: Optional[str] = None
+    door_id: Optional[int] = None
+    granted: Optional[bool] = None
+    reason: Optional[str] = None
+
+
+@app.post("/api/doors", status_code=status.HTTP_201_CREATED, tags=["Doors"])
+async def create_door(request: DoorCreateRequest, current_user: str = "admin"):
+    """Create a new door in HAL"""
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+        data = request.model_dump()
+
+        async with session.post(
+            f"{HAL_CORE_URL}/hal/doors",
+            json=data,
+            headers=headers
+        ) as resp:
+            if resp.status != 201:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to create door"))
+            return await resp.json()
+
+
+@app.put("/api/doors/{door_id}", tags=["Doors"])
+async def update_door(door_id: int, request: DoorConfigRequest, current_user: str = "admin"):
+    """Update door configuration in HAL"""
+    update_data = request.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+
+        async with session.put(
+            f"{HAL_CORE_URL}/hal/doors/{door_id}",
+            json=update_data,
+            headers=headers
+        ) as resp:
+            if resp.status != 200:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to update door"))
+            return await resp.json()
+
+
+@app.post("/api/timezones", status_code=status.HTTP_201_CREATED, tags=["Timezones"])
+async def create_timezone(request: TimezoneCreateRequest, current_user: str = "admin"):
+    """Create a new timezone in HAL"""
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+        data = {
+            "name": request.name,
+            "description": request.description,
+            "intervals": [i.model_dump() for i in request.intervals]
+        }
+        if request.id:
+            data["id"] = request.id
+
+        async with session.post(
+            f"{HAL_CORE_URL}/hal/timezones",
+            json=data,
+            headers=headers
+        ) as resp:
+            if resp.status != 201:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to create timezone"))
+            return await resp.json()
+
+
+@app.post("/api/holidays", status_code=status.HTTP_201_CREATED, tags=["Holidays"])
+async def create_holiday(request: HolidayCreateRequest, current_user: str = "admin"):
+    """Create a new holiday in HAL"""
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+        data = request.model_dump()
+
+        async with session.post(
+            f"{HAL_CORE_URL}/hal/holidays",
+            json=data,
+            headers=headers
+        ) as resp:
+            if resp.status != 201:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to create holiday"))
+            return await resp.json()
+
+
+@app.delete("/api/holidays/{date}", tags=["Holidays"])
+async def delete_holiday(date: int, current_user: str = "admin"):
+    """Delete a holiday by date (YYYYMMDD format)"""
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+
+        async with session.delete(
+            f"{HAL_CORE_URL}/hal/holidays/{date}",
+            headers=headers
+        ) as resp:
+            if resp.status != 200:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to delete holiday"))
+            return await resp.json()
+
+
+# =============================================================================
+# Testing & Simulation Endpoints
+# =============================================================================
+
+@app.post("/api/test/access-decision", tags=["Testing"])
+async def test_access_decision(request: AccessDecisionTestRequest):
+    """
+    Test access decision logic WITHOUT generating an event.
+
+    This simulates what would happen if a card was presented to a reader,
+    but doesn't create any events. Useful for testing access configurations.
+
+    Returns:
+    - granted: Whether access would be granted
+    - reason: Explanation of the decision
+    - card_found: Whether the card exists in HAL
+    - card_active: Whether the card is active
+    - permission_valid: Whether the card's permission exists
+    - door_accessible: Whether the permission includes this door
+    - timezone_active: Whether the timezone is currently active
+    """
+    async with aiohttp.ClientSession() as session:
+        data = request.model_dump()
+
+        async with session.post(
+            f"{HAL_CORE_URL}/hal/access/decide",
+            json=data
+        ) as resp:
+            if resp.status != 200:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to test access"))
+            return await resp.json()
+
+
+@app.post("/api/test/card-read", tags=["Testing"])
+async def test_card_read(request: CardReadSimulationRequest, current_user: str = "admin"):
+    """
+    Simulate a card read event.
+
+    This performs an access decision AND creates the corresponding event.
+    Use this to test the full card read flow including event generation.
+
+    Returns:
+    - granted: Whether access was granted
+    - reason: Explanation of the decision
+    - event_id: The ID of the generated event
+    """
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+        data = request.model_dump()
+
+        async with session.post(
+            f"{HAL_CORE_URL}/hal/simulate/card-read",
+            json=data,
+            headers=headers
+        ) as resp:
+            if resp.status != 200:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to simulate card read"))
+            return await resp.json()
+
+
+@app.post("/api/test/event", tags=["Testing"])
+async def test_event(request: EventSimulationRequest, current_user: str = "admin"):
+    """
+    Create a simulated event of any type.
+
+    Event types:
+    - 1: CARD_READ
+    - 2: ACCESS_GRANTED
+    - 3: ACCESS_DENIED
+    - 4: DOOR_FORCED
+    - 5: DOOR_HELD
+    - 6: DOOR_OPENED
+    - 7: DOOR_CLOSED
+    - 8: RELAY_ACTIVATED
+    - 9: RELAY_DEACTIVATED
+    - 10: READER_TAMPER
+    - 11: SYSTEM_EVENT
+    - 12: CONFIG_CHANGE
+    - 13: ALARM
+    - 14: TROUBLE
+    """
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+        data = request.model_dump()
+
+        async with session.post(
+            f"{HAL_CORE_URL}/hal/simulate/event",
+            json=data,
+            headers=headers
+        ) as resp:
+            if resp.status != 200:
+                error = await resp.json()
+                raise HTTPException(status_code=resp.status, detail=error.get("detail", "Failed to simulate event"))
+            return await resp.json()
+
+
+@app.get("/api/test/connectivity", tags=["Testing"])
+async def test_hal_connectivity():
+    """
+    Test connectivity to HAL Core API.
+
+    Returns connection status and basic HAL information.
+    """
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{HAL_CORE_URL}/hal/test/connectivity",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    hal_response = await resp.json()
+                    return {
+                        "status": "connected",
+                        "hal_status": hal_response.get("status"),
+                        "hal_version": hal_response.get("version"),
+                        "hal_url": HAL_CORE_URL,
+                        "aether_version": AETHER_VERSION
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "hal_status": "unreachable",
+                        "error": f"HAL returned status {resp.status}"
+                    }
+    except asyncio.TimeoutError:
+        return {
+            "status": "timeout",
+            "hal_status": "unreachable",
+            "error": "Connection to HAL timed out"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "hal_status": "unreachable",
+            "error": str(e)
+        }
+
+
+@app.get("/api/test/diagnostics", tags=["Testing"])
+async def get_hal_diagnostics():
+    """
+    Get detailed HAL diagnostics.
+
+    Returns database statistics, table counts, and system information
+    for troubleshooting.
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{HAL_CORE_URL}/hal/diagnostics") as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=resp.status, detail="Failed to get diagnostics")
+            return await resp.json()
+
+
+@app.get("/api/test/run-all", tags=["Testing"])
+async def run_all_tests():
+    """
+    Run a comprehensive test suite on HAL.
+
+    Tests:
+    1. Connectivity test
+    2. Health check
+    3. Card operations
+    4. Access level operations
+    5. Door operations
+    6. Event operations
+    7. Configuration export
+
+    Returns a test report with pass/fail status for each test.
+    """
+    results = {
+        "timestamp": int(time.time()),
+        "tests": [],
+        "passed": 0,
+        "failed": 0
+    }
+
+    async with aiohttp.ClientSession() as session:
+        # Test 1: Connectivity
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/test/connectivity", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                if resp.status == 200:
+                    results["tests"].append({"name": "connectivity", "status": "PASS"})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "connectivity", "status": "FAIL", "error": f"Status {resp.status}"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "connectivity", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+            return results  # Can't continue without connectivity
+
+        # Test 2: Health check
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/health") as resp:
+                if resp.status == 200:
+                    health = await resp.json()
+                    results["tests"].append({"name": "health_check", "status": "PASS", "data": {"hal_status": health.get("status")}})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "health_check", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "health_check", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+        # Test 3: Card listing
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/cards?limit=1") as resp:
+                if resp.status == 200:
+                    results["tests"].append({"name": "card_list", "status": "PASS"})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "card_list", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "card_list", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+        # Test 4: Access level listing
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/access-levels") as resp:
+                if resp.status == 200:
+                    results["tests"].append({"name": "access_level_list", "status": "PASS"})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "access_level_list", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "access_level_list", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+        # Test 5: Door listing
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/doors") as resp:
+                if resp.status == 200:
+                    results["tests"].append({"name": "door_list", "status": "PASS"})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "door_list", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "door_list", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+        # Test 6: Event listing
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/events?limit=1") as resp:
+                if resp.status == 200:
+                    results["tests"].append({"name": "event_list", "status": "PASS"})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "event_list", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "event_list", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+        # Test 7: Configuration export
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/export") as resp:
+                if resp.status == 200:
+                    export = await resp.json()
+                    results["tests"].append({
+                        "name": "config_export",
+                        "status": "PASS",
+                        "data": {
+                            "cards": len(export.get("cards", [])),
+                            "access_levels": len(export.get("access_levels", [])),
+                            "doors": len(export.get("doors", []))
+                        }
+                    })
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "config_export", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "config_export", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+        # Test 8: Diagnostics
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/diagnostics") as resp:
+                if resp.status == 200:
+                    results["tests"].append({"name": "diagnostics", "status": "PASS"})
+                    results["passed"] += 1
+                else:
+                    results["tests"].append({"name": "diagnostics", "status": "FAIL"})
+                    results["failed"] += 1
+        except Exception as e:
+            results["tests"].append({"name": "diagnostics", "status": "FAIL", "error": str(e)})
+            results["failed"] += 1
+
+    results["summary"] = f"{results['passed']}/{results['passed'] + results['failed']} tests passed"
+    return results
+
+
+@app.post("/api/test/card-crud", tags=["Testing"])
+async def test_card_crud(current_user: str = "admin"):
+    """
+    Run a full Card CRUD (Create, Read, Update, Delete) test.
+
+    Creates a test card, reads it, updates it, and deletes it.
+    Useful for testing the complete card lifecycle.
+    """
+    results = {
+        "timestamp": int(time.time()),
+        "steps": [],
+        "success": True
+    }
+
+    test_card_number = f"TEST-{int(time.time())}"
+
+    async with aiohttp.ClientSession() as session:
+        headers = get_auth_headers("aether", current_user)
+
+        # Step 1: Create
+        try:
+            data = {
+                "card_number": test_card_number,
+                "facility_code": 100,
+                "permission_id": 1,
+                "holder_name": "Test User (Auto-Delete)"
+            }
+            async with session.post(f"{HAL_CORE_URL}/hal/cards", json=data, headers=headers) as resp:
+                if resp.status == 201:
+                    results["steps"].append({"step": "create", "status": "PASS"})
+                else:
+                    error = await resp.json()
+                    results["steps"].append({"step": "create", "status": "FAIL", "error": error})
+                    results["success"] = False
+                    return results
+        except Exception as e:
+            results["steps"].append({"step": "create", "status": "FAIL", "error": str(e)})
+            results["success"] = False
+            return results
+
+        # Step 2: Read
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/cards/{test_card_number}") as resp:
+                if resp.status == 200:
+                    card = await resp.json()
+                    results["steps"].append({"step": "read", "status": "PASS", "data": {"holder_name": card.get("holder_name")}})
+                else:
+                    results["steps"].append({"step": "read", "status": "FAIL"})
+                    results["success"] = False
+        except Exception as e:
+            results["steps"].append({"step": "read", "status": "FAIL", "error": str(e)})
+            results["success"] = False
+
+        # Step 3: Update
+        try:
+            update_data = {"holder_name": "Updated Test User"}
+            async with session.put(f"{HAL_CORE_URL}/hal/cards/{test_card_number}", json=update_data, headers=headers) as resp:
+                if resp.status == 200:
+                    updated = await resp.json()
+                    if updated.get("holder_name") == "Updated Test User":
+                        results["steps"].append({"step": "update", "status": "PASS"})
+                    else:
+                        results["steps"].append({"step": "update", "status": "FAIL", "error": "Name not updated"})
+                        results["success"] = False
+                else:
+                    results["steps"].append({"step": "update", "status": "FAIL"})
+                    results["success"] = False
+        except Exception as e:
+            results["steps"].append({"step": "update", "status": "FAIL", "error": str(e)})
+            results["success"] = False
+
+        # Step 4: Delete
+        try:
+            async with session.delete(f"{HAL_CORE_URL}/hal/cards/{test_card_number}", headers=headers) as resp:
+                if resp.status == 200:
+                    results["steps"].append({"step": "delete", "status": "PASS"})
+                else:
+                    results["steps"].append({"step": "delete", "status": "FAIL"})
+                    results["success"] = False
+        except Exception as e:
+            results["steps"].append({"step": "delete", "status": "FAIL", "error": str(e)})
+            results["success"] = False
+
+        # Step 5: Verify deletion
+        try:
+            async with session.get(f"{HAL_CORE_URL}/hal/cards/{test_card_number}") as resp:
+                if resp.status == 404:
+                    results["steps"].append({"step": "verify_delete", "status": "PASS"})
+                else:
+                    results["steps"].append({"step": "verify_delete", "status": "FAIL", "error": "Card still exists"})
+                    results["success"] = False
+        except Exception as e:
+            results["steps"].append({"step": "verify_delete", "status": "FAIL", "error": str(e)})
+            results["success"] = False
+
+    return results
 
 
 # =============================================================================

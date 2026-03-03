@@ -1830,6 +1830,411 @@ async def bulk_sync(
 
 
 # =============================================================================
+# Access Decision & Simulation Endpoints (for testing)
+# =============================================================================
+
+class AccessDecisionRequest(BaseModel):
+    card_number: str
+    door_id: int
+    reader_id: int = 1
+    direction: str = "entry"  # "entry" or "exit"
+    pin: Optional[str] = None
+
+class AccessDecisionResponse(BaseModel):
+    granted: bool
+    reason: str
+    card_found: bool
+    card_active: bool
+    permission_valid: bool
+    door_accessible: bool
+    timezone_active: bool
+    details: Dict[str, Any] = {}
+
+class CardReadSimulation(BaseModel):
+    card_number: str
+    door_id: int = 1
+    reader_id: int = 1
+    facility_code: int = 0
+
+class EventSimulation(BaseModel):
+    event_type: int
+    card_number: Optional[str] = None
+    door_id: Optional[int] = None
+    granted: Optional[bool] = None
+    reason: Optional[str] = None
+    extra_data: Optional[Dict[str, Any]] = None
+
+
+@app.post("/hal/access/decide", response_model=AccessDecisionResponse, tags=["Access Control"])
+async def decide_access(request: AccessDecisionRequest):
+    """
+    Make an access decision without generating an event.
+    This simulates what would happen if a card was presented.
+    Useful for testing access control logic.
+    """
+    details = {}
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 1. Find the card
+        cursor.execute("SELECT * FROM cards WHERE card_number = ?", (request.card_number,))
+        card = cursor.fetchone()
+
+        if not card:
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Card not found in database",
+                card_found=False,
+                card_active=False,
+                permission_valid=False,
+                door_accessible=False,
+                timezone_active=False,
+                details={"card_number": request.card_number}
+            )
+
+        card_dict = dict(card)
+        details["card"] = {
+            "holder_name": card_dict.get("holder_name", ""),
+            "permission_id": card_dict["permission_id"],
+            "facility_code": card_dict.get("facility_code", 0)
+        }
+
+        # 2. Check if card is active
+        if not card_dict["is_active"]:
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Card is inactive",
+                card_found=True,
+                card_active=False,
+                permission_valid=False,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        # 3. Check activation/expiration dates
+        now = int(time.time())
+        if card_dict["activation_date"] > 0 and now < card_dict["activation_date"]:
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Card not yet activated",
+                card_found=True,
+                card_active=False,
+                permission_valid=False,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        if card_dict["expiration_date"] > 0 and now > card_dict["expiration_date"]:
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Card has expired",
+                card_found=True,
+                card_active=False,
+                permission_valid=False,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        # 4. Check if door exists
+        cursor.execute("SELECT * FROM doors WHERE id = ?", (request.door_id,))
+        door = cursor.fetchone()
+
+        if not door:
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Door not found",
+                card_found=True,
+                card_active=True,
+                permission_valid=False,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        door_dict = dict(door)
+        details["door"] = {
+            "door_name": door_dict["door_name"],
+            "location": door_dict.get("location", "")
+        }
+
+        # 5. Check access level -> door assignment
+        cursor.execute("""
+            SELECT ald.*, al.name as level_name
+            FROM access_level_doors ald
+            JOIN access_levels al ON ald.access_level_id = al.id
+            WHERE ald.access_level_id = ? AND ald.door_id = ?
+        """, (card_dict["permission_id"], request.door_id))
+        assignment = cursor.fetchone()
+
+        if not assignment:
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Access level does not include this door",
+                card_found=True,
+                card_active=True,
+                permission_valid=True,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        assignment_dict = dict(assignment)
+        details["access_level"] = {
+            "id": card_dict["permission_id"],
+            "name": assignment_dict.get("level_name", ""),
+            "timezone_id": assignment_dict.get("timezone_id", 2)
+        }
+
+        # 6. Check direction permission
+        if request.direction == "entry" and not assignment_dict.get("entry_allowed", 1):
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Entry not allowed for this access level",
+                card_found=True,
+                card_active=True,
+                permission_valid=True,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        if request.direction == "exit" and not assignment_dict.get("exit_allowed", 1):
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Exit not allowed for this access level",
+                card_found=True,
+                card_active=True,
+                permission_valid=True,
+                door_accessible=False,
+                timezone_active=False,
+                details=details
+            )
+
+        # 7. Check timezone (simplified - full implementation would check intervals)
+        timezone_id = assignment_dict.get("timezone_id", 2)
+        timezone_active = timezone_id == 2 or timezone_id == 0  # 2 = Always, 0 = Never (for testing)
+
+        if timezone_id == 0 or timezone_id == 1:  # Never
+            return AccessDecisionResponse(
+                granted=False,
+                reason="Access timezone not active",
+                card_found=True,
+                card_active=True,
+                permission_valid=True,
+                door_accessible=True,
+                timezone_active=False,
+                details=details
+            )
+
+        # All checks passed - grant access
+        return AccessDecisionResponse(
+            granted=True,
+            reason="Access granted",
+            card_found=True,
+            card_active=True,
+            permission_valid=True,
+            door_accessible=True,
+            timezone_active=True,
+            details=details
+        )
+
+
+@app.post("/hal/simulate/card-read", tags=["Simulation"])
+async def simulate_card_read(sim: CardReadSimulation, source_info: Dict = Depends(get_source_info)):
+    """
+    Simulate a card read event - makes access decision AND creates event.
+    This is what would happen when a card is presented to a reader.
+    Returns the access decision result and the generated event.
+    """
+    # First make the access decision
+    decision_request = AccessDecisionRequest(
+        card_number=sim.card_number,
+        door_id=sim.door_id,
+        reader_id=sim.reader_id
+    )
+
+    # Get decision details
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Get card info
+        cursor.execute("SELECT * FROM cards WHERE card_number = ?", (sim.card_number,))
+        card = cursor.fetchone()
+
+        # Get door info
+        cursor.execute("SELECT * FROM doors WHERE id = ?", (sim.door_id,))
+        door = cursor.fetchone()
+
+        # Make decision
+        granted = False
+        reason = "Card not found"
+
+        if card:
+            card_dict = dict(card)
+            if not card_dict["is_active"]:
+                reason = "Card inactive"
+            else:
+                # Check access level assignment
+                cursor.execute("""
+                    SELECT ald.*, al.name
+                    FROM access_level_doors ald
+                    JOIN access_levels al ON ald.access_level_id = al.id
+                    WHERE ald.access_level_id = ? AND ald.door_id = ?
+                """, (card_dict["permission_id"], sim.door_id))
+                assignment = cursor.fetchone()
+
+                if assignment:
+                    granted = True
+                    reason = "Access granted"
+                else:
+                    reason = "No door access"
+        else:
+            reason = "Unknown card"
+
+        # Log the event
+        event_type = EventType.ACCESS_GRANTED if granted else EventType.ACCESS_DENIED
+
+        extra_data = {
+            "reader_id": sim.reader_id,
+            "facility_code": sim.facility_code,
+            "simulated": True
+        }
+
+        if card:
+            extra_data["holder_name"] = card_dict.get("holder_name", "")
+            extra_data["permission_id"] = card_dict.get("permission_id")
+
+        if door:
+            door_dict = dict(door)
+            extra_data["door_name"] = door_dict.get("door_name", "")
+
+        event_id = log_event(
+            conn,
+            event_type,
+            card_number=sim.card_number,
+            door_id=sim.door_id,
+            granted=granted,
+            reason=reason,
+            extra_data=extra_data
+        )
+
+        # Update card's last access
+        if card and granted:
+            cursor.execute("""
+                UPDATE cards SET last_access_time = ?, last_access_door = ?
+                WHERE card_number = ?
+            """, (int(time.time()), sim.door_id, sim.card_number))
+
+        conn.commit()
+
+    return {
+        "granted": granted,
+        "reason": reason,
+        "event_id": event_id,
+        "card_number": sim.card_number,
+        "door_id": sim.door_id,
+        "timestamp": int(time.time())
+    }
+
+
+@app.post("/hal/simulate/event", tags=["Simulation"])
+async def simulate_event(sim: EventSimulation, source_info: Dict = Depends(get_source_info)):
+    """
+    Create a simulated event of any type.
+    Useful for testing event handling and display.
+    """
+    extra_data = sim.extra_data or {}
+    extra_data["simulated"] = True
+
+    with get_db() as conn:
+        event_id = log_event(
+            conn,
+            sim.event_type,
+            card_number=sim.card_number,
+            door_id=sim.door_id,
+            granted=sim.granted,
+            reason=sim.reason,
+            extra_data=extra_data
+        )
+        conn.commit()
+
+    return {
+        "event_id": event_id,
+        "event_type": sim.event_type,
+        "timestamp": int(time.time())
+    }
+
+
+@app.get("/hal/test/connectivity", tags=["Testing"])
+async def test_connectivity():
+    """
+    Simple connectivity test endpoint.
+    Returns basic status for testing HAL reachability.
+    """
+    return {
+        "status": "ok",
+        "version": HAL_VERSION,
+        "timestamp": int(time.time()),
+        "message": "HAL Core API is reachable"
+    }
+
+
+@app.get("/hal/diagnostics", tags=["Testing"])
+async def get_diagnostics():
+    """
+    Get detailed diagnostics for troubleshooting.
+    Includes database stats, table counts, and system info.
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        diagnostics = {
+            "timestamp": int(time.time()),
+            "version": HAL_VERSION,
+            "uptime_seconds": int(time.time()) - startup_time,
+            "database": {
+                "path": HAL_DB_PATH,
+                "exists": os.path.exists(HAL_DB_PATH),
+                "size_bytes": os.path.getsize(HAL_DB_PATH) if os.path.exists(HAL_DB_PATH) else 0
+            },
+            "tables": {}
+        }
+
+        # Get counts for all tables
+        tables = ["cards", "access_levels", "access_level_doors", "doors", "timezones",
+                  "timezone_intervals", "holidays", "relays", "events", "config_changes"]
+
+        for table in tables:
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                diagnostics["tables"][table] = cursor.fetchone()[0]
+            except Exception as e:
+                diagnostics["tables"][table] = f"Error: {str(e)}"
+
+        # Get schema version
+        cursor.execute("SELECT value FROM system_status WHERE key = 'schema_version'")
+        row = cursor.fetchone()
+        diagnostics["schema_version"] = row[0] if row else "unknown"
+
+        # Recent events summary
+        cursor.execute("""
+            SELECT event_type, COUNT(*) as count
+            FROM events
+            WHERE timestamp > ?
+            GROUP BY event_type
+        """, (int(time.time()) - 3600,))  # Last hour
+        diagnostics["recent_events_by_type"] = {
+            str(row[0]): row[1] for row in cursor.fetchall()
+        }
+
+    return diagnostics
+
+
+# =============================================================================
 # Export Configuration (Full dump for backup/migration)
 # =============================================================================
 
