@@ -1,0 +1,57 @@
+cmake_minimum_required(VERSION 3.10)
+project(HAL C)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# Dependencies
+find_package(SQLite3 REQUIRED)
+
+# Include directories
+include_directories(include)
+include_directories(src)
+
+# HAL Core Library
+add_library(hal_core
+    src/hal_core/hal.c
+    src/hal_core/event_manager.c
+    src/hal_core/card_database.c
+    src/hal_core/access_logic.c
+)
+
+target_link_libraries(hal_core PRIVATE SQLite3::SQLite3)
+
+# SDK Wrapper
+add_library(sdk_wrapper
+    src/sdk_wrapper/sdk_interface.c
+    src/sdk_wrapper/command_handler.c
+)
+
+# Utils
+add_library(hal_utils
+    src/utils/logging.c
+    src/utils/queue.c
+    src/utils/timestamp.c
+)
+
+# Test executable
+add_executable(test_hal_unit tests/test_card_database.c)
+target_link_libraries(test_hal_unit PRIVATE hal_core hal_utils SQLite3::SQLite3)
+
+# Examples
+add_executable(example_basic examples/basic_access.c)
+target_link_libraries(example_basic PRIVATE hal_core sdk_wrapper hal_utils SQLite3::SQLite3)
+
+add_executable(example_events examples/event_subscription.c)
+target_link_libraries(example_events PRIVATE hal_core sdk_wrapper hal_utils)
+
+add_executable(example_provision examples/card_provisioning.c)
+target_link_libraries(example_provision PRIVATE hal_core hal_utils SQLite3::SQLite3)
+
+# Install
+install(TARGETS hal_core sdk_wrapper hal_utils
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
+
+install(FILES include/hal_public.h include/hal_types.h
+        DESTINATION include)

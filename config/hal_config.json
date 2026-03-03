@@ -1,0 +1,58 @@
+{
+    "system": {
+        "name": "HAL-001",
+        "location": "Main Building",
+        "timezone": "America/Los_Angeles"
+    },
+    "database": {
+        "events_db_path": "hal_events.db",
+        "cards_db_path": "hal_cards.db",
+        "buffer_size": 10000,
+        "retention_days": 90
+    },
+    "ambient_ai": {
+        "enabled": true,
+        "server_url": "https://ambient.local",
+        "api_endpoint": "/api/v1/events",
+        "api_key": "YOUR_API_KEY_HERE",
+        "timeout_seconds": 5,
+        "retry_attempts": 3,
+        "batch_size": 100
+    },
+    "hardware": {
+        "relay_count": 8,
+        "door_unlock_time_ms": 5000,
+        "reader_count": 4
+    },
+    "doors": [
+        {
+            "id": 1,
+            "name": "Main Entrance",
+            "relay_id": 1,
+            "reader_id": 1
+        },
+        {
+            "id": 2,
+            "name": "Server Room",
+            "relay_id": 2,
+            "reader_id": 2
+        },
+        {
+            "id": 3,
+            "name": "Back Door",
+            "relay_id": 3,
+            "reader_id": 3
+        }
+    ],
+    "logging": {
+        "level": "info",
+        "file_path": "hal.log",
+        "max_size_mb": 100,
+        "rotate_count": 5
+    },
+    "network": {
+        "listen_port": 8080,
+        "enable_api": true,
+        "enable_websocket": false
+    }
+}

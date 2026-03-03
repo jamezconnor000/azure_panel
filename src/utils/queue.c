@@ -1,0 +1,1 @@
+#include <stdlib.h>\nvoid* queue_create(void) { return malloc(1024); }

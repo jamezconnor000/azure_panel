@@ -1,0 +1,32 @@
+# HAL Configuration
+
+# Event Buffer
+event_buffer_size: 100000      # Max events to buffer
+max_events_before_ack: 50      # Events before waiting for ack
+flush_timeout: 0               # 0=on-capacity, N=seconds
+
+# Connection
+controller_address: localhost
+controller_port: 5000
+connection_timeout_ms: 5000
+keepalive_interval: 30000
+
+# Logging
+log_level: 6                   # 0-8 (Emergency to Trace)
+log_file: /var/log/hal.log
+log_rotate: true
+log_size_mb: 10
+
+# Access Control
+default_strike_time_ms: 1000
+enable_offline_mode: true
+enable_apb_checking: true
+
+# Performance
+max_concurrent_events: 100
+event_queue_size: 1000
+
+# Database
+database_path: /var/lib/hal/cards.db
+auto_backup: true
+backup_interval_hours: 24

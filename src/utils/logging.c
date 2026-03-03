@@ -1,0 +1,1 @@
+#include <stdio.h>\nvoid log_msg(const char* msg) { printf("%s\\n", msg); }

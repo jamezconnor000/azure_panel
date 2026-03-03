@@ -1,0 +1,29 @@
+# AXIOM Link Configuration
+# HAL Azure Panel Familiar
+# Version 1.0.0
+
+master: Final_Axiom
+axiom_path: /Users/mosley/AXIOM
+project_path: /Users/mosley/AXIOM/Projects/Azure_Panel
+source_path: /Users/mosley/AXIOM/Projects/Azure_Panel/Source
+
+# Network
+chronicle_server: http://localhost:8766
+chronicle_channel: /Users/mosley/AXIOM/chronicle/familiars_incoming/azure-panel/
+
+# Grimoire (write via /inscribe)
+grimoire_path: /Users/mosley/AXIOM/Grimoire
+
+# MCP Memory
+mcp_memory: ./mcp/azure-panel-memory.json
+mcp_server: hal-azure-memory
+
+# Status
+connected: true
+queue_enabled: false
+queue_path: ./.axiom_queue/
+
+# Identity
+familiar_id: FAM-HAL-v1.0-001
+project_name: HAL Azure Panel
+color_realm: AMBER

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # REST API Server (Inbound)
+  hal-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: hal-api
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./hal_sdk.db:/app/hal_sdk.db
+      - ./hal_cards.db:/app/hal_cards.db
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    environment:
+      - HAL_PORT=8080
+      - CONFIG_FILE=config/hal_config.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Event Export Daemon (Outbound)
+  hal-export:
+    build:
+      context: .
+      dockerfile: Dockerfile.export
+    container_name: hal-export
+    depends_on:
+      - hal-api
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    environment:
+      - HAL_HOST=hal-api
+      - HAL_PORT=8080
+      - POLL_INTERVAL=1
+      - CONFIG_FILE=config/hal_config.json
+    restart: unless-stopped
+
+networks:
+  default:
+    name: hal-network

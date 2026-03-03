@@ -1,0 +1,45 @@
+{
+  "database": {
+    "path": "./data/cards.db",
+    "journal_mode": "WAL",
+    "busy_timeout_ms": 5000
+  },
+  "ipc": {
+    "socket_path": "/tmp/hal_events.sock",
+    "buffer_size": 4096,
+    "backlog": 5
+  },
+  "reader": {
+    "device_uid": "62023ea7-3968-4f74-b948-1e3d821dc939",
+    "device_name": "Front Door Reader",
+    "device_type": "Reader",
+    "port": 1
+  },
+  "alarm_uids": {
+    "access_granted": "12634ea7-3968-4f74-b948-1e3d821dc939",
+    "access_denied": "22634ea7-3968-4f74-b948-1e3d821dc939",
+    "door_forced_open": "32634ea7-3968-4f74-b948-1e3d821dc939",
+    "door_held_open": "42634ea7-3968-4f74-b948-1e3d821dc939"
+  },
+  "wiegand": {
+    "format": "26-bit",
+    "facility_code_check": false,
+    "default_facility_code": 100
+  },
+  "access_logic": {
+    "check_timezone": false,
+    "check_anti_passback": false,
+    "default_grant_time_ms": 5000
+  },
+  "logging": {
+    "level": "DEBUG",
+    "file": "./logs/hal_engine.log",
+    "console": true,
+    "max_size_mb": 10,
+    "rotation": 5
+  },
+  "simulation": {
+    "enabled": true,
+    "fifo_path": "/tmp/hal_sim_wiegand"
+  }
+}

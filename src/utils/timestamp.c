@@ -1,0 +1,1 @@
+#include <time.h>\ntime_t get_timestamp(void) { return time(NULL); }

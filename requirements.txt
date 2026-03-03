@@ -1,0 +1,4 @@
+PyYAML>=5.1
+cffi>=1.14.0
+click>=7.0
+colorama>=0.4.0

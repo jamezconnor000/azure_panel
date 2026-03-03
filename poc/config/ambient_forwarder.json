@@ -1,0 +1,57 @@
+{
+  "ambient_api": {
+    "endpoint": "https://pacs-ingestion.ambient.ai/v1/api/event",
+    "api_key": "YOUR_API_KEY_HERE",
+    "timeout_ms": 5000,
+    "user_agent": "AetherAccess/1.0",
+    "verify_ssl": true
+  },
+  "source_system": {
+    "uid": "e22833e4-cfdb-40c1-9b44-490adc053330",
+    "name": "Aether Access PoC",
+    "type": "Panel"
+  },
+  "alarm_definitions": {
+    "access_granted": {
+      "uid": "12634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Access Granted"
+    },
+    "access_denied": {
+      "uid": "22634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Access Denied"
+    },
+    "door_forced_open": {
+      "uid": "32634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Door Forced Open"
+    },
+    "door_held_open": {
+      "uid": "42634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Door Held Open"
+    }
+  },
+  "ipc": {
+    "socket_path": "/tmp/hal_events.sock",
+    "reconnect_delay_sec": 2,
+    "heartbeat_interval_sec": 30
+  },
+  "retry": {
+    "enabled": true,
+    "max_attempts": 3,
+    "initial_delay_ms": 1000,
+    "max_delay_ms": 30000,
+    "backoff_multiplier": 2.0,
+    "queue_path": "./data/retry_queue.db",
+    "max_queue_size": 10000
+  },
+  "logging": {
+    "level": "DEBUG",
+    "file": "./logs/ambient_forwarder.log",
+    "console": true,
+    "max_size_mb": 10,
+    "rotation": 5
+  },
+  "stats": {
+    "enabled": true,
+    "report_interval_sec": 60
+  }
+}

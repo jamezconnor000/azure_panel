@@ -1,0 +1,105 @@
+{
+	"ConfigType":	"IC2",
+	"AccessPoints":	{
+		"Door 1":	{
+			"Id":	{
+				"Type":	3,
+				"Node":	0,
+				"LDA":	1,
+				"Instance":	0
+			},
+			"InitMode":	2,
+			"ShortStrikeTime":	5,
+			"LongStrikeTime":	10,
+			"ShortHeldOpenTime":	30,
+			"LongHeldOpenTime":	60,
+			"AreaA":	{
+				"Type":	4,
+				"Node":	0,
+				"LDA":	1,
+				"Instance":	0
+			},
+			"AreaB":	{
+				"Type":	4,
+				"Node":	0,
+				"LDA":	2,
+				"Instance":	0
+			},
+			"StrikeList":	[],
+			"StrikesToAdd":	[]
+		}
+	},
+	"Areas":	{
+		"Lobby":	{
+			"Id":	{
+				"Type":	4,
+				"Node":	0,
+				"LDA":	1,
+				"Instance":	0
+			},
+			"TimedAPB":	5,
+			"MinOccupancy":	0,
+			"MaxOccupancy":	0,
+			"OccupancyLimit":	0,
+			"MinRequiredOccupancy":	0
+		},
+		"SecureZone":	{
+			"Id":	{
+				"Type":	4,
+				"Node":	0,
+				"LDA":	2,
+				"Instance":	0
+			},
+			"TimedAPB":	10,
+			"MinOccupancy":	0,
+			"MaxOccupancy":	0,
+			"OccupancyLimit":	0,
+			"MinRequiredOccupancy":	0
+		}
+	},
+	"CardFormats":	[{
+			"Id":	1,
+			"Name":	"26-bit Wiegand",
+			"TotalBits":	26,
+			"FacilityStartBit":	1,
+			"FacilityBitLength":	8,
+			"CardStartBit":	9,
+			"CardBitLength":	16
+		}],
+	"Cards":	[{
+			"CardId":	100001,
+			"Fields":	[{
+					"Permission":	["100"]
+				}]
+		}, {
+			"CardId":	200001,
+			"Fields":	[{
+					"Permission":	["100"]
+				}]
+		}],
+	"PermissionEntries":	[],
+	"ReaderSettings":	{
+	},
+	"RelaySettings":	{
+		"OUT1":	{
+			"Id":	{
+				"Type":	6,
+				"Node":	0,
+				"LDA":	1,
+				"Instance":	0
+			},
+			"PulseDuration":	100,
+			"CtrlTimeZone":	0,
+			"Flags":	0,
+			"Mode":	2
+		}
+	},
+	"InputThresholds":	{
+	},
+	"COMPortSettings":	{
+	},
+	"DownstreamBoards":	[],
+	"Strikes":	[],
+	"BoardAddressToAccessPoint":	{
+	}
+}

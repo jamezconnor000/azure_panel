@@ -1,0 +1,49 @@
+# Build
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+*.egg
+venv/
+.venv/
+env/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm/
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# MCP Memory (local state)
+mcp/

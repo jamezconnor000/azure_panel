@@ -1,0 +1,15 @@
+name: Build & Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install cmake build-essential sqlite3 libsqlite3-dev
+      - name: Build
+        run: ./scripts/build.sh
+      - name: Test
+        run: ./scripts/test.sh

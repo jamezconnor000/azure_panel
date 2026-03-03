@@ -1,0 +1,54 @@
+{
+  "source_system": {
+    "uid": "e22833e4-cfdb-40c1-9b44-490adc053330",
+    "name": "Aether Access PoC",
+    "type": "Panel",
+    "description": "BLU-IC2 Controller - PoC Environment"
+  },
+  "devices": [
+    {
+      "uid": "62023ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Front Door Reader",
+      "type": "Reader",
+      "port": 1,
+      "protocol": "Wiegand",
+      "format": "26-bit",
+      "enabled": true
+    },
+    {
+      "uid": "72023ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Back Door Reader",
+      "type": "Reader",
+      "port": 2,
+      "protocol": "Wiegand",
+      "format": "26-bit",
+      "enabled": true
+    }
+  ],
+  "alarm_types": [
+    {
+      "uid": "12634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Access Granted",
+      "event_type": "access_granted",
+      "severity": "info"
+    },
+    {
+      "uid": "22634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Access Denied",
+      "event_type": "access_denied",
+      "severity": "warning"
+    },
+    {
+      "uid": "32634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Door Forced Open",
+      "event_type": "door_forced_open",
+      "severity": "critical"
+    },
+    {
+      "uid": "42634ea7-3968-4f74-b948-1e3d821dc939",
+      "name": "Door Held Open",
+      "event_type": "door_held_open",
+      "severity": "warning"
+    }
+  ]
+}

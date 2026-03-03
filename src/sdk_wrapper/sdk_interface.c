@@ -1,0 +1,1 @@
+#include <stdio.h>\nint sdk_init(void) { return 0; }

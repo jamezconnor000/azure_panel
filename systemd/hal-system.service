@@ -1,0 +1,40 @@
+[Unit]
+Description=HAL Complete System (REST API + Event Export)
+Documentation=file:///opt/hal/docs/
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=hal
+Group=hal
+WorkingDirectory=/opt/hal
+
+# Environment
+Environment="HAL_HOST=localhost"
+Environment="HAL_PORT=8080"
+Environment="CONFIG_FILE=config/hal_config.json"
+
+# Start script
+ExecStart=/opt/hal/start_hal_system.sh
+ExecStop=/opt/hal/stop_hal_system.sh
+
+# PID files
+PIDFile=/opt/hal/.hal_api.pid
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/hal/logs /opt/hal/hal_sdk.db /opt/hal/hal_cards.db
+
+# Limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

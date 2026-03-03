@@ -1,0 +1,1 @@
+#include <stdio.h>\nint cmd_init(void) { return 0; }
