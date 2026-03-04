@@ -1,0 +1,91 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Bifrost API Server",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["api.aether_bifrost:app", "--reload", "--port", "8080"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Loom Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["src/loom/tests/", "-v"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Saga Dev Server",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/aether_saga",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "C: Debug HAL",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/hal_test",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "lldb"
+    },
+    {
+      "name": "Attach to Remote Panel",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "${input:panelIP}",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/app"
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "panelIP",
+      "type": "promptString",
+      "description": "Enter the BLU-IC2 panel IP address",
+      "default": "192.168.1.100"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (Bifrost + Saga)",
+      "configurations": ["Bifrost API Server", "Saga Dev Server"],
+      "stopAll": true
+    }
+  ]
+}

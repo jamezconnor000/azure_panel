@@ -1,0 +1,60 @@
+{
+  "recommendations": [
+    // AI Assistant
+    "anthropic.claude-code",
+
+    // Python (Thrall, Bifrost, Loom)
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",
+    "njpwerner.autodocstring",
+
+    // TypeScript/React (Saga)
+    "dsznajder.es7-react-js-snippets",
+    "bradlc.vscode-tailwindcss",
+    "yoavbls.pretty-ts-errors",
+    "formulahendry.auto-rename-tag",
+    "pranaygp.vscode-css-peek",
+
+    // C/Embedded (HAL Core)
+    "ms-vscode.cpptools",
+    "ms-vscode.cpptools-extension-pack",
+    "ms-vscode.makefile-tools",
+
+    // Database (PostgreSQL, SQLite)
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "mtxr.sqltools-driver-sqlite",
+
+    // API Development
+    "humao.rest-client",
+    "rangav.vscode-thunder-client",
+
+    // Shell/DevOps
+    "timonwong.shellcheck",
+    "mads-hartmann.bash-ide-vscode",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-ssh",
+
+    // Git
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+
+    // File Formats
+    "redhat.vscode-yaml",
+    "ms-vscode.hexeditor",
+    "yzhang.markdown-all-in-one",
+
+    // Productivity
+    "usernamehw.errorlens",
+    "gruntfuggly.todo-tree",
+    "alefragnani.bookmarks",
+    "christian-kohler.path-intellisense",
+    "streetsidesoftware.code-spell-checker",
+
+    // UI
+    "pkief.material-icon-theme"
+  ],
+  "unwantedRecommendations": []
+}

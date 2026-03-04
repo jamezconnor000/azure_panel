@@ -1,0 +1,128 @@
+{
+  // Editor
+  "editor.formatOnSave": true,
+  "editor.tabSize": 4,
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // Python (Thrall, Bifrost, Loom)
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+
+  // TypeScript/React (Saga)
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+
+  // C (HAL Core)
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.tabSize": 4
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.tabSize": 4
+  },
+
+  // JSON
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+
+  // Shell
+  "[shellscript]": {
+    "editor.tabSize": 4
+  },
+  "shellcheck.enableQuickFix": true,
+
+  // File Associations
+  "files.associations": {
+    "manifest": "json",
+    "*.app": "binary",
+    "Makefile.*": "makefile",
+    ".env*": "dotenv"
+  },
+
+  // Search Exclusions
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/*.app": true,
+    "**/deploy/*.tar.gz": true,
+    "**/aether_saga/dist": true
+  },
+
+  // File Exclusions (Explorer)
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/node_modules": true,
+    "**/.git": false
+  },
+
+  // SQLTools
+  "sqltools.useNodeRuntime": true,
+
+  // Todo Tree
+  "todo-tree.general.tags": [
+    "TODO",
+    "FIXME",
+    "BUG",
+    "HACK",
+    "XXX",
+    "SECURITY"
+  ],
+  "todo-tree.highlights.defaultHighlight": {
+    "gutterIcon": true
+  },
+
+  // Remote SSH (for Azure BLU-IC2 panels)
+  "remote.SSH.remotePlatform": {
+    "*": "linux"
+  },
+
+  // Spell Checker
+  "cSpell.words": [
+    "Aether",
+    "Thrall",
+    "Bifrost",
+    "Saga",
+    "Loom",
+    "AetherDB",
+    "OSDP",
+    "Wiegand",
+    "DESFire",
+    "cardholder",
+    "cardholders",
+    "FastAPI",
+    "psycopg"
+  ]
+}

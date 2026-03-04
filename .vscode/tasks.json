@@ -1,0 +1,136 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build All Apps",
+      "type": "shell",
+      "command": "./build-aether-access.sh",
+      "options": {
+        "env": {
+          "PATH": "/opt/homebrew/opt/coreutils/libexec/gnubin:/opt/homebrew/opt/binutils/bin:${env:PATH}"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build Saga (React)",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/aether_saga"
+      },
+      "group": "build",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Dev Saga (React)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/aether_saga"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in"
+        }
+      }
+    },
+    {
+      "label": "Run Bifrost API",
+      "type": "shell",
+      "command": "uvicorn api.aether_bifrost:app --reload --port 8080",
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Python Tests",
+      "type": "shell",
+      "command": "pytest -v",
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}"
+        }
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Loom Tests",
+      "type": "shell",
+      "command": "pytest src/loom/tests/ -v",
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}"
+        }
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint Python (Ruff)",
+      "type": "shell",
+      "command": "ruff check . --fix",
+      "problemMatcher": []
+    },
+    {
+      "label": "Type Check Python",
+      "type": "shell",
+      "command": "pyright",
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy to Panel (SCP)",
+      "type": "shell",
+      "command": "scp deploy/*.app root@${input:panelIP}:/tmp/",
+      "problemMatcher": []
+    },
+    {
+      "label": "SSH to Panel",
+      "type": "shell",
+      "command": "ssh root@${input:panelIP}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Saga Dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/aether_saga"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Python Dependencies",
+      "type": "shell",
+      "command": "pip install -r requirements.txt",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "panelIP",
+      "type": "promptString",
+      "description": "Enter the BLU-IC2 panel IP address",
+      "default": "192.168.1.100"
+    }
+  ]
+}
