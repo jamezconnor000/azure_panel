@@ -1,0 +1,138 @@
+# =============================================================================
+# Aether Access Configuration
+# =============================================================================
+# Copy this file to /etc/aether/aether.conf and customize as needed
+# =============================================================================
+
+[server]
+# API server binding address (0.0.0.0 for all interfaces)
+host = 0.0.0.0
+
+# API server port
+port = 8080
+
+# Number of worker processes (recommend 2 for ARM64)
+workers = 2
+
+# Enable debug mode (DO NOT enable in production)
+debug = false
+
+# =============================================================================
+[database]
+# =============================================================================
+
+# Path to the HAL SQLite database
+path = /var/lib/aether/hal_database.db
+
+# Directory for database backups
+backup_dir = /var/lib/aether/backups
+
+# Enable automatic daily backups
+auto_backup = true
+
+# Number of backup files to retain
+backup_retention = 7
+
+# =============================================================================
+[logging]
+# =============================================================================
+
+# Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+level = INFO
+
+# Log file path
+file = /var/log/aether/aether.log
+
+# Maximum log file size before rotation
+max_size = 10M
+
+# Number of rotated log files to keep
+backup_count = 5
+
+# Log format (json or text)
+format = text
+
+# =============================================================================
+[security]
+# =============================================================================
+
+# IMPORTANT: Generate a new secret key for production!
+# Use: openssl rand -hex 32
+secret_key = CHANGE_THIS_IN_PRODUCTION
+
+# JWT access token expiration (minutes)
+token_expire_minutes = 480
+
+# JWT refresh token expiration (days)
+refresh_token_days = 7
+
+# Allowed CORS origins (comma-separated, or * for all)
+# Production: restrict to your frontend domain
+allowed_origins = *
+
+# Maximum login attempts before lockout
+max_login_attempts = 5
+
+# Account lockout duration (minutes)
+lockout_duration = 15
+
+# =============================================================================
+[hal]
+# =============================================================================
+
+# HAL mode: auto, native, simulation
+# - auto: Try native library, fall back to simulation
+# - native: Require native C library
+# - simulation: Always use SQLite simulation
+mode = auto
+
+# Path to HAL shared library (for native mode)
+library_path = /opt/aether-access/lib/libhal_core.so
+
+# Event buffer size
+event_buffer_size = 100000
+
+# Event export interval (seconds)
+event_export_interval = 60
+
+# =============================================================================
+[osdp]
+# =============================================================================
+
+# Enable OSDP secure channel
+secure_channel_enabled = true
+
+# Default baud rate for OSDP communication
+default_baud_rate = 9600
+
+# Reader poll interval (milliseconds)
+poll_interval_ms = 100
+
+# Communication timeout (milliseconds)
+timeout_ms = 200
+
+# =============================================================================
+[websocket]
+# =============================================================================
+
+# Enable WebSocket for real-time updates
+enabled = true
+
+# Heartbeat interval (seconds)
+heartbeat_interval = 5
+
+# Maximum clients per connection
+max_clients = 100
+
+# =============================================================================
+[maintenance]
+# =============================================================================
+
+# Enable automatic database cleanup
+auto_cleanup = true
+
+# Keep events for this many days
+event_retention_days = 365
+
+# Cleanup schedule (cron format)
+cleanup_schedule = 0 3 * * *
