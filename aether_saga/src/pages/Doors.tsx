@@ -1,8 +1,23 @@
+/**
+ * Doors - Situ8-style Door Management
+ */
+
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, DoorOpen, Lock, Unlock } from 'lucide-react';
+import { Plus, Edit2, Trash2, DoorOpen, Lock, Unlock, X } from 'lucide-react';
 import { doorsApi } from '../api/bifrost';
 import { READER_MODE_NAMES } from '../types';
 import type { Door } from '../types';
+
+// DEMO MODE
+const DEMO_MODE = true;
+const MOCK_DOORS: Door[] = [
+  { door_id: 1, name: 'Main Entrance', strike_time_ms: 5000, reader_mode: 5, osdp_enabled: true },
+  { door_id: 2, name: 'Side Entrance', strike_time_ms: 3000, reader_mode: 5, osdp_enabled: true },
+  { door_id: 3, name: 'Server Room', strike_time_ms: 2000, reader_mode: 7, osdp_enabled: true },
+  { door_id: 4, name: 'Parking Garage', strike_time_ms: 8000, reader_mode: 5, osdp_enabled: false },
+  { door_id: 5, name: 'Emergency Exit', strike_time_ms: 5000, reader_mode: 3, osdp_enabled: false },
+  { door_id: 6, name: 'Loading Dock', strike_time_ms: 10000, reader_mode: 5, osdp_enabled: true },
+];
 
 function DoorModal({
   isOpen,
@@ -43,20 +58,34 @@ function DoorModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="glass rounded-xl w-full max-w-lg mx-4">
-        <div className="px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0, 0, 0, 0.7)' }}>
+      <div
+        className="w-full max-w-lg mx-4 rounded-md"
+        style={{ background: '#161b22', border: '1px solid #30363d' }}
+      >
+        <div
+          className="flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: '1px solid #30363d' }}
+        >
+          <h2 className="text-lg font-semibold" style={{ color: '#e6edf3' }}>
             {door ? 'Edit Door' : 'Add Door'}
           </h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-md transition-colors"
+            style={{ color: '#7d8590' }}
+          >
+            <X size={18} />
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Door ID</label>
+            <label className="block text-xs mb-1.5" style={{ color: '#7d8590' }}>Door ID</label>
             <input
               type="number"
               required
-              className="w-full bg-aether-darker border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-aether-primary"
+              className="w-full rounded-md px-4 py-2.5 focus:outline-none"
+              style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3' }}
               value={formData.door_id || ''}
               onChange={(e) => setFormData({ ...formData, door_id: parseInt(e.target.value) })}
               disabled={!!door}
@@ -64,11 +93,12 @@ function DoorModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Name *</label>
+            <label className="block text-xs mb-1.5" style={{ color: '#7d8590' }}>Door Name *</label>
             <input
               type="text"
               required
-              className="w-full bg-aether-darker border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-aether-primary"
+              className="w-full rounded-md px-4 py-2.5 focus:outline-none"
+              style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3' }}
               value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Main Entrance"
@@ -76,23 +106,25 @@ function DoorModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Strike Time (ms)</label>
+            <label className="block text-xs mb-1.5" style={{ color: '#7d8590' }}>Strike Duration (ms)</label>
             <input
               type="number"
-              className="w-full bg-aether-darker border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-aether-primary"
+              className="w-full rounded-md px-4 py-2.5 focus:outline-none"
+              style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3' }}
               value={formData.strike_time_ms || 3000}
               onChange={(e) => setFormData({ ...formData, strike_time_ms: parseInt(e.target.value) })}
               min={500}
               max={30000}
               step={500}
             />
-            <p className="text-gray-500 text-xs mt-1">How long the door unlocks (500-30000ms)</p>
+            <p className="text-xs mt-1" style={{ color: '#484f58' }}>How long the door remains unlocked (500-30000ms)</p>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Reader Mode</label>
+            <label className="block text-xs mb-1.5" style={{ color: '#7d8590' }}>Reader Mode</label>
             <select
-              className="w-full bg-aether-darker border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-aether-primary"
+              className="w-full rounded-md px-4 py-2.5 focus:outline-none"
+              style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3' }}
               value={formData.reader_mode || 5}
               onChange={(e) => setFormData({ ...formData, reader_mode: parseInt(e.target.value) })}
             >
@@ -102,17 +134,19 @@ function DoorModal({
             </select>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid #30363d' }}>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5"
+              className="px-5 py-2.5 rounded-md transition-colors"
+              style={{ border: '1px solid #30363d', color: '#7d8590' }}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-lg bg-aether-primary text-aether-darker font-medium hover:bg-aether-primary/90"
+              className="px-5 py-2.5 rounded-md font-medium transition-colors"
+              style={{ background: '#238636', color: '#ffffff' }}
             >
               {door ? 'Save Changes' : 'Add Door'}
             </button>
@@ -132,6 +166,11 @@ export function Doors() {
   const [unlocking, setUnlocking] = useState<number | null>(null);
 
   const fetchData = async () => {
+    if (DEMO_MODE) {
+      setDoors(MOCK_DOORS);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await doorsApi.list();
@@ -152,7 +191,6 @@ export function Doors() {
   const handleSave = async (data: Partial<Door>) => {
     try {
       if (selectedDoor) {
-        // For updates, delete and re-create
         await doorsApi.delete(selectedDoor.door_id);
         await doorsApi.create(data);
       } else {
@@ -180,7 +218,6 @@ export function Doors() {
     try {
       setUnlocking(doorId);
       await doorsApi.unlock(doorId, 5);
-      // Visual feedback - the unlock button will show as active for 5 seconds
       setTimeout(() => setUnlocking(null), 5000);
     } catch (err) {
       console.error('Failed to unlock door:', err);
@@ -209,7 +246,7 @@ export function Doors() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-aether-primary border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-transparent" style={{ borderColor: '#8b5cf6', borderTopColor: 'transparent' }} />
       </div>
     );
   }
@@ -217,38 +254,50 @@ export function Doors() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Doors</h1>
-          <p className="text-gray-400">Manage door readers and access points</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: '#22c55e' }}
+            />
+            <h1 className="text-xl font-semibold" style={{ color: '#e6edf3' }}>
+              Doors
+            </h1>
+          </div>
+          <p className="text-sm" style={{ color: '#7d8590' }}>
+            Manage door readers and access points
+          </p>
         </div>
         <button
           onClick={() => {
             setSelectedDoor(null);
             setModalOpen(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-aether-primary text-aether-darker font-medium hover:bg-aether-primary/90"
+          className="flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors"
+          style={{ background: '#238636', color: '#ffffff' }}
         >
-          <Plus size={20} />
+          <Plus size={18} />
           Add Door
         </button>
       </div>
 
       {error && (
-        <div className="glass rounded-xl p-4 border border-aether-danger/30">
-          <p className="text-aether-danger">{error}</p>
+        <div className="p-4 rounded-md" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+          <p style={{ color: '#ef4444' }}>{error}</p>
         </div>
       )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Door Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {doors.length === 0 ? (
-          <div className="col-span-full glass rounded-xl p-8 text-center">
-            <DoorOpen size={48} className="mx-auto text-gray-500 mb-4" />
-            <p className="text-gray-400">No doors configured</p>
+          <div className="col-span-full p-8 text-center rounded-md" style={{ background: '#161b22', border: '1px solid #30363d' }}>
+            <DoorOpen size={48} className="mx-auto mb-4" style={{ color: '#7d8590' }} />
+            <p style={{ color: '#7d8590' }}>No doors configured</p>
             <button
               onClick={() => setModalOpen(true)}
-              className="mt-4 text-aether-primary hover:underline"
+              className="mt-4"
+              style={{ color: '#58a6ff' }}
             >
               Add your first door
             </button>
@@ -259,20 +308,27 @@ export function Doors() {
             const readerMode = door.reader_mode || 5;
 
             return (
-              <div key={door.door_id} className="glass rounded-xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-white/10">
+              <div
+                key={door.door_id}
+                className="rounded-md overflow-hidden transition-colors"
+                style={{ background: '#161b22', border: '1px solid #30363d' }}
+              >
+                {/* Door Header */}
+                <div className="px-4 py-3" style={{ borderBottom: '1px solid #30363d' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isUnlocking ? 'bg-aether-success/20' : 'bg-aether-primary/20'}`}>
-                        {isUnlocking ? (
-                          <Unlock size={24} className="text-aether-success" />
-                        ) : (
-                          <DoorOpen size={24} className="text-aether-primary" />
-                        )}
+                      <div
+                        className="w-10 h-10 rounded-md flex items-center justify-center transition-colors"
+                        style={{
+                          background: isUnlocking ? 'rgba(34, 197, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+                          color: isUnlocking ? '#22c55e' : '#8b5cf6'
+                        }}
+                      >
+                        {isUnlocking ? <Unlock size={20} /> : <DoorOpen size={20} />}
                       </div>
                       <div>
-                        <h3 className="text-white font-medium">{door.name}</h3>
-                        <p className="text-gray-400 text-sm">Door {door.door_id}</p>
+                        <h3 className="font-medium" style={{ color: '#e6edf3' }}>{door.name}</h3>
+                        <p className="text-xs" style={{ color: '#7d8590' }}>Door {door.door_id}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -281,88 +337,92 @@ export function Doors() {
                           setSelectedDoor(door);
                           setModalOpen(true);
                         }}
-                        className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                        className="p-2 rounded-md transition-colors"
+                        style={{ color: '#7d8590' }}
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(door.door_id)}
-                        className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-aether-danger"
+                        className="p-2 rounded-md transition-colors"
+                        style={{ color: '#7d8590' }}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="px-6 py-4 space-y-4">
+                <div className="p-4 space-y-4">
                   {/* Door Info */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Strike Time</p>
-                      <p className="text-white">{door.strike_time_ms}ms</p>
+                      <p className="text-xs" style={{ color: '#7d8590' }}>Strike Time</p>
+                      <p style={{ color: '#e6edf3' }}>{door.strike_time_ms}ms</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Reader Mode</p>
-                      <p className="text-white">{READER_MODE_NAMES[readerMode] || 'Unknown'}</p>
+                      <p className="text-xs" style={{ color: '#7d8590' }}>Reader Mode</p>
+                      <p style={{ color: '#e6edf3' }}>{READER_MODE_NAMES[readerMode] || 'Unknown'}</p>
                     </div>
                   </div>
 
-                  {/* Controls */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => isUnlocking ? handleLock(door.door_id) : handleUnlock(door.door_id)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                        isUnlocking
-                          ? 'bg-aether-success text-white'
-                          : 'bg-aether-primary/20 text-aether-primary hover:bg-aether-primary/30'
-                      }`}
-                    >
-                      {isUnlocking ? (
-                        <>
-                          <Lock size={16} />
-                          Lock
-                        </>
-                      ) : (
-                        <>
-                          <Unlock size={16} />
-                          Unlock
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  {/* Main Control */}
+                  <button
+                    onClick={() => isUnlocking ? handleLock(door.door_id) : handleUnlock(door.door_id)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium transition-colors"
+                    style={{
+                      background: isUnlocking ? 'rgba(34, 197, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+                      border: isUnlocking ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(139, 92, 246, 0.3)',
+                      color: isUnlocking ? '#22c55e' : '#8b5cf6'
+                    }}
+                  >
+                    {isUnlocking ? (
+                      <>
+                        <Lock size={16} />
+                        Lock
+                      </>
+                    ) : (
+                      <>
+                        <Unlock size={16} />
+                        Unlock
+                      </>
+                    )}
+                  </button>
 
-                  {/* Quick Mode Buttons */}
+                  {/* Mode Buttons */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleSetMode(door.door_id, 2)}
-                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium ${
-                        readerMode === 2
-                          ? 'bg-aether-success/20 text-aether-success'
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
+                      className="flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        background: readerMode === 2 ? 'rgba(34, 197, 94, 0.15)' : '#0d1117',
+                        border: readerMode === 2 ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid #30363d',
+                        color: readerMode === 2 ? '#22c55e' : '#7d8590'
+                      }}
                     >
                       Unlocked
                     </button>
                     <button
                       onClick={() => handleSetMode(door.door_id, 5)}
-                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium ${
-                        readerMode === 5
-                          ? 'bg-aether-primary/20 text-aether-primary'
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
+                      className="flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        background: readerMode === 5 ? 'rgba(139, 92, 246, 0.15)' : '#0d1117',
+                        border: readerMode === 5 ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid #30363d',
+                        color: readerMode === 5 ? '#8b5cf6' : '#7d8590'
+                      }}
                     >
                       Card Only
                     </button>
                     <button
                       onClick={() => handleSetMode(door.door_id, 10)}
-                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium ${
-                        readerMode === 10
-                          ? 'bg-aether-danger/20 text-aether-danger'
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
+                      className="flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        background: readerMode === 10 ? 'rgba(239, 68, 68, 0.15)' : '#0d1117',
+                        border: readerMode === 10 ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid #30363d',
+                        color: readerMode === 10 ? '#ef4444' : '#7d8590'
+                      }}
                     >
-                      Blocked
+                      Locked
                     </button>
                   </div>
                 </div>

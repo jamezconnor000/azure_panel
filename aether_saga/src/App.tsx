@@ -1,11 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
+import { FrostParticles } from './components/FrostParticles';
 import {
-  Dashboard,
-  Cardholders,
-  AccessLevels,
-  Doors,
+  UnifiedDashboard,
+  People,
   Events,
   Settings,
   Login,
@@ -21,10 +20,13 @@ const queryClient = new QueryClient({
   },
 });
 
+// DEMO MODE - Set to true to bypass authentication
+const DEMO_MODE = true;
+
 function ProtectedRoutes() {
   const { isAuthenticated, isLoading, login, logout, error } = useAuth();
 
-  if (isLoading) {
+  if (isLoading && !DEMO_MODE) {
     return (
       <div className="min-h-screen bg-aether-darker flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-2 border-aether-primary border-t-transparent"></div>
@@ -32,17 +34,15 @@ function ProtectedRoutes() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !DEMO_MODE) {
     return <Login onLogin={login} error={error} />;
   }
 
   return (
     <Layout onLogout={logout}>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/cardholders" element={<Cardholders />} />
-        <Route path="/access-levels" element={<AccessLevels />} />
-        <Route path="/doors" element={<Doors />} />
+        <Route path="/" element={<UnifiedDashboard />} />
+        <Route path="/people" element={<People />} />
         <Route path="/events" element={<Events />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -54,6 +54,7 @@ function ProtectedRoutes() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <FrostParticles />
       <BrowserRouter>
         <ProtectedRoutes />
       </BrowserRouter>

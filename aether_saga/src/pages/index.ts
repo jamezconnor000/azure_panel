@@ -1,5 +1,7 @@
 export { Dashboard } from './Dashboard';
+export { UnifiedDashboard } from './UnifiedDashboard';
 export { Cardholders } from './Cardholders';
+export { People } from './People';
 export { AccessLevels } from './AccessLevels';
 export { Doors } from './Doors';
 export { Events } from './Events';
