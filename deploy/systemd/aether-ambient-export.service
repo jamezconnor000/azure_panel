@@ -1,0 +1,54 @@
+[Unit]
+Description=Aether Access Ambient.ai Event Export Daemon
+Documentation=https://docs.ambient.ai/pacs-integration
+After=network.target network-online.target aether-access.service
+Wants=network-online.target
+BindsTo=aether-access.service
+PartOf=aether-access.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=exec
+User=aether
+Group=aether
+EnvironmentFile=/etc/aether/aether.env
+EnvironmentFile=-/etc/aether/ambient.env
+WorkingDirectory=/opt/aether-access/api
+ExecStart=/opt/aether-access/venv/bin/python ambient_export_daemon.py \
+    --api-key ${AMBIENT_API_KEY} \
+    --api-url ${AMBIENT_API_URL:-https://pacs-ingestion.ambient.ai/v1/api} \
+    --db-path ${HAL_DATABASE_PATH:-/var/lib/aether/hal_database.db} \
+    --batch-size ${AMBIENT_BATCH_SIZE:-100} \
+    --poll-interval ${AMBIENT_POLL_INTERVAL:-5} \
+    --max-retries ${AMBIENT_MAX_RETRIES:-3} \
+    --log-level ${HAL_LOG_LEVEL:-INFO}
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=append:/var/log/aether/ambient_export.log
+StandardError=append:/var/log/aether/ambient_export-error.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/aether /var/log/aether
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+
+# Resource limits
+MemoryMax=256M
+TasksMax=50
+
+[Install]
+WantedBy=multi-user.target

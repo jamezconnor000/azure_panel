@@ -1,0 +1,50 @@
+[Unit]
+Description=Aether Access Control Panel API
+Documentation=https://github.com/your-org/aether-access
+After=network.target network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=exec
+User=aether
+Group=aether
+EnvironmentFile=/etc/aether/aether.env
+WorkingDirectory=/opt/aether-access/api
+ExecStartPre=/opt/aether-access/venv/bin/python -c "import unified_api_server"
+ExecStart=/opt/aether-access/venv/bin/python -m uvicorn unified_api_server:app \
+    --host 0.0.0.0 \
+    --port ${API_PORT:-8080} \
+    --workers 2 \
+    --access-log \
+    --log-level info
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=append:/var/log/aether/aether.log
+StandardError=append:/var/log/aether/aether-error.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/aether /var/log/aether
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+
+# Resource limits
+MemoryMax=512M
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target
