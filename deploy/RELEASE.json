@@ -1,0 +1,38 @@
+{
+  "name": "Aether Access",
+  "codename": "Bifrost's Light",
+  "version": "4.0.0",
+  "adk_version": "1.22.1",
+  "build_date": "2026-03-04T13:44:04Z",
+  "components": [
+    {
+      "id": "aether_thrall",
+      "name": "Aether Thrall",
+      "description": "Hardware Abstraction Layer - Source of Truth",
+      "version": "4.0.0",
+      "ports": []
+    },
+    {
+      "id": "aether_bifrost",
+      "name": "Aether Bifrost",
+      "description": "API Server with Familiar AI Assistant",
+      "version": "4.0.0",
+      "ports": [8080]
+    },
+    {
+      "id": "aether_saga",
+      "name": "Aether Saga",
+      "description": "Web Management Interface",
+      "version": "4.0.0",
+      "ports": [80]
+    },
+    {
+      "id": "aether_skald",
+      "name": "Aether Skald",
+      "description": "Event Chronicle & Audit Trail",
+      "version": "4.0.0",
+      "ports": [8090]
+    }
+  ],
+  "motto": "The machines answer to US."
+}

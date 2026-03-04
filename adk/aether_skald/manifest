@@ -1,0 +1,12 @@
+{
+  "Id": "aether_skald",
+  "Info": "Aether Skald - Event Chronicle & Audit Trail for Aether Access 4.0",
+  "EntryPoint": "/app/run.sh",
+  "Ports": [8090],
+  "Data": "/app/data",
+  "PFSData": "/app/pdata",
+  "ExclusiveMode": 0,
+  "Version": "4.0.0",
+  "WorkDir": "/app",
+  "User": "root"
+}
