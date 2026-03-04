@@ -1,0 +1,12 @@
+{
+  "Id": "aether_thrall",
+  "Info": "Aether Thrall - Hardware Abstraction Layer for Azure BLU-IC2",
+  "EntryPoint": "/app/run.sh",
+  "Ports": [],
+  "Data": "/app/data",
+  "PFSData": "/app/pdata",
+  "ExclusiveMode": 0,
+  "Version": "3.0.0",
+  "WorkDir": "/app",
+  "User": "root"
+}

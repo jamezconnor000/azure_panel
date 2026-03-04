@@ -1,0 +1,12 @@
+{
+  "Id": "aether_bifrost",
+  "Info": "Aether Bifrost - API Server for Aether Access 3.0",
+  "EntryPoint": "/app/run.sh",
+  "Ports": [8080],
+  "Data": "/app/data",
+  "PFSData": "/app/pdata",
+  "ExclusiveMode": 0,
+  "Version": "3.0.0",
+  "WorkDir": "/app",
+  "User": "root"
+}
