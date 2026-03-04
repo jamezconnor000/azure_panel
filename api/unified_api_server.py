@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Azure Panel Unified API Server
-==============================
+Aether Bifrost API Server
+=========================
+The bridge between realms - connecting applications to hardware.
+
 Single API server that provides all endpoints for:
 - Aether Access (React Frontend)
 - HAL Core (C Library via Python bindings)
@@ -9,7 +11,7 @@ Single API server that provides all endpoints for:
 This is the ONLY API server needed on the panel.
 
 Architecture:
-    Browser --> [Unified API (8080)] --> [HAL Library (Python bindings)] --> [Hardware]
+    Browser --> [Aether Bifrost (8080)] --> [HAL Library (Python bindings)] --> [Hardware]
                       |
                       +--> /api/v1/     Frontend I/O control
                       +--> /api/v2.1/   Auth, Users, Doors, Access Levels
@@ -141,7 +143,8 @@ async def lifespan(app: FastAPI):
 
     # Startup
     print("\n" + "=" * 70)
-    print(" AZURE PANEL UNIFIED API SERVER ".center(70))
+    print(" AETHER BIFROST API SERVER ".center(70))
+    print(" The Bridge Between Realms ".center(70))
     print("=" * 70)
     print(f"  Version:  {VERSION}")
     print(f"  Port:     {API_PORT}")
@@ -170,7 +173,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
     if hal:
         hal.shutdown()
-    print("\nUnified API Server shutdown complete")
+    print("\nAether Bifrost API Server shutdown complete")
 
 
 def _seed_default_data():
@@ -201,9 +204,10 @@ def _seed_default_data():
 # =============================================================================
 
 app = FastAPI(
-    title="Azure Panel Unified API",
+    title="Aether Bifrost API",
     description="""
-# Azure Panel Unified API
+# Aether Bifrost API
+### The Bridge Between Realms
 
 Single API for HAL hardware control and Aether Access management.
 
@@ -299,20 +303,24 @@ async def root():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Azure Panel API</title>
+        <title>Aether Bifrost API</title>
         <style>
             body {{ font-family: sans-serif; max-width: 900px; margin: 50px auto; background: #1a1a2e; color: #eee; padding: 20px; }}
-            h1, h2 {{ color: #00d4ff; }}
+            h1 {{ color: #00d4ff; }}
+            h2 {{ color: #00d4ff; }}
+            .subtitle {{ color: #888; font-size: 0.9em; margin-top: -10px; }}
             a {{ color: #00d4ff; }}
             code {{ background: #333; padding: 2px 8px; border-radius: 4px; }}
             table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
             th, td {{ text-align: left; padding: 8px; border-bottom: 1px solid #333; }}
             .ok {{ color: #00aa55; }}
             .warn {{ color: #ffaa00; }}
+            .rainbow {{ background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); -webkit-background-clip: text; background-clip: text; color: transparent; }}
         </style>
     </head>
     <body>
-        <h1>Azure Panel Unified API</h1>
+        <h1>Aether Bifrost API</h1>
+        <p class="subtitle">The Bridge Between Realms</p>
         <p>Version {VERSION} | HAL Mode: <span class="{'ok' if HAL_AVAILABLE else 'warn'}">{'Native' if HAL_AVAILABLE else 'Simulation'}</span></p>
 
         <h2>Documentation</h2>
@@ -715,6 +723,440 @@ async def hal_ambient_source_system():
 
 
 # =============================================================================
+# Reader Mode Control (UnityIS-compatible)
+# =============================================================================
+
+# Reader Mode constants (UnityIS compatible)
+READER_MODES = {
+    1: "Disabled",
+    2: "Unlocked",
+    3: "Locked (REX Only)",
+    4: "Facility Code Only",
+    5: "Card Only",
+    6: "PIN Only",
+    7: "Card and PIN",
+    8: "Card or PIN",
+    9: "Office First",
+    10: "Blocked",
+    11: "Emergency Lock",
+    12: "Emergency Unlock",
+    13: "Fingerprint",
+    14: "Card and Fingerprint",
+    15: "Card or Fingerprint"
+}
+
+
+class ReaderModeRequest(BaseModel):
+    mode: int = Field(..., ge=1, le=15, description="Reader mode (1-15)")
+
+
+@app.get("/hal/readers/{reader_id}/mode", tags=["HAL Core - Reader Control"])
+async def hal_get_reader_mode(reader_id: int):
+    """Get current reader mode"""
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    door = hal.get_door(reader_id)
+    if not door:
+        raise HTTPException(status_code=404, detail="Reader not found")
+
+    # Get current mode (default to Card Only if not set)
+    current_mode = door.get("reader_mode", 5)
+
+    return {
+        "reader_id": reader_id,
+        "mode": current_mode,
+        "mode_name": READER_MODES.get(current_mode, "Unknown"),
+        "available_modes": READER_MODES
+    }
+
+
+@app.post("/hal/readers/{reader_id}/mode", tags=["HAL Core - Reader Control"])
+async def hal_set_reader_mode(reader_id: int, request: ReaderModeRequest):
+    """
+    Set reader mode (UnityIS compatible)
+
+    Reader Modes:
+    - 1: Disabled
+    - 2: Unlocked
+    - 3: Locked (REX Only)
+    - 4: Facility Code Only
+    - 5: Card Only
+    - 6: PIN Only
+    - 7: Card and PIN
+    - 8: Card or PIN
+    - 9: Office First
+    - 10: Blocked
+    - 11: Emergency Lock
+    - 12: Emergency Unlock
+    - 13: Fingerprint
+    - 14: Card and Fingerprint
+    - 15: Card or Fingerprint
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    door = hal.get_door(reader_id)
+    if not door:
+        raise HTTPException(status_code=404, detail="Reader not found")
+
+    # Update reader mode
+    if hasattr(hal, 'set_reader_mode'):
+        success = hal.set_reader_mode(reader_id, request.mode)
+    else:
+        # Fallback: store mode in door config
+        success = hal.update_door(reader_id, reader_mode=request.mode)
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to set reader mode")
+
+    # Log the mode change
+    hal.add_event(
+        6,  # READER_MODE_CHANGE
+        door_id=reader_id,
+        details=f"Reader mode changed to {request.mode} ({READER_MODES.get(request.mode, 'Unknown')})"
+    )
+
+    # Broadcast mode change
+    await ws_manager.broadcast({
+        "type": "reader_mode_change",
+        "reader_id": reader_id,
+        "mode": request.mode,
+        "mode_name": READER_MODES.get(request.mode, "Unknown"),
+        "timestamp": datetime.now().isoformat()
+    })
+
+    return {
+        "success": True,
+        "reader_id": reader_id,
+        "mode": request.mode,
+        "mode_name": READER_MODES.get(request.mode, "Unknown")
+    }
+
+
+@app.get("/hal/readers/modes", tags=["HAL Core - Reader Control"])
+async def hal_list_reader_modes():
+    """List all available reader modes"""
+    return {
+        "modes": [{"id": k, "name": v} for k, v in READER_MODES.items()]
+    }
+
+
+# =============================================================================
+# Credential Status (UnityIS-compatible)
+# =============================================================================
+
+# Credential Status constants (UnityIS compatible)
+CREDENTIAL_STATUS = {
+    1: "Active",
+    2: "Lost",
+    3: "Returned",
+    4: "Deactivated",
+    5: "Terminated",
+    6: "Broken",
+    7: "Furlough",
+    100: "Created",
+    101: "Created and Email Sent",
+    102: "Activated",
+    103: "Pending Revoke",
+    104: "Revoked",
+    105: "Deleted",
+    106: "Lost",
+    107: "Created and Email not Sent"
+}
+
+
+class CredentialStatusRequest(BaseModel):
+    status: int = Field(..., description="Credential status code")
+
+
+@app.get("/hal/cards/{card_number}/status", tags=["HAL Core - Cards"])
+async def hal_get_card_status(card_number: str):
+    """Get credential status"""
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    card = hal.get_card(card_number)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    status = card.get("status", 1 if card.get("is_active") else 4)
+
+    return {
+        "card_number": card_number,
+        "status": status,
+        "status_name": CREDENTIAL_STATUS.get(status, "Unknown"),
+        "is_active": card.get("is_active", False)
+    }
+
+
+@app.put("/hal/cards/{card_number}/status", tags=["HAL Core - Cards"])
+async def hal_set_card_status(card_number: str, request: CredentialStatusRequest):
+    """
+    Set credential status (UnityIS compatible)
+
+    Status Codes:
+    - 1: Active
+    - 2: Lost
+    - 3: Returned
+    - 4: Deactivated
+    - 5: Terminated
+    - 6: Broken
+    - 7: Furlough
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    card = hal.get_card(card_number)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    # Determine if card should be active based on status
+    is_active = request.status in [1, 102]  # Active or Activated
+
+    success = hal.update_card(
+        card_number,
+        status=request.status,
+        is_active=is_active
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update card status")
+
+    return {
+        "success": True,
+        "card_number": card_number,
+        "status": request.status,
+        "status_name": CREDENTIAL_STATUS.get(request.status, "Unknown"),
+        "is_active": is_active
+    }
+
+
+@app.get("/hal/credential-statuses", tags=["HAL Core - Cards"])
+async def hal_list_credential_statuses():
+    """List all available credential statuses"""
+    return {
+        "statuses": [{"id": k, "name": v} for k, v in CREDENTIAL_STATUS.items()]
+    }
+
+
+# =============================================================================
+# Anti-Passback Control (UnityIS-compatible)
+# =============================================================================
+
+@app.post("/hal/cards/{card_number}/reset-apb", tags=["HAL Core - Anti-Passback"])
+async def hal_reset_anti_passback(card_number: str):
+    """
+    Reset anti-passback state for a card/personnel (UnityIS compatible)
+
+    This clears the anti-passback violation state allowing the card
+    to be used again at entry/exit points.
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    card = hal.get_card(card_number)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    # Reset APB state
+    if hasattr(hal, 'reset_anti_passback'):
+        success = hal.reset_anti_passback(card_number)
+    else:
+        # Fallback: update card APB state
+        success = hal.update_card(card_number, apb_state=0, apb_zone=None)
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to reset anti-passback")
+
+    # Log the APB reset
+    hal.add_event(
+        7,  # APB_RESET
+        card_number=card_number,
+        details="Anti-passback state reset"
+    )
+
+    return {
+        "success": True,
+        "card_number": card_number,
+        "message": "Anti-passback state reset successfully"
+    }
+
+
+@app.post("/hal/reset-all-apb", tags=["HAL Core - Anti-Passback"])
+async def hal_reset_all_anti_passback():
+    """Reset anti-passback state for all cards"""
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    if hasattr(hal, 'reset_all_anti_passback'):
+        count = hal.reset_all_anti_passback()
+    else:
+        # Fallback: iterate through all cards
+        cards = hal.get_all_cards(limit=100000)
+        count = 0
+        for card in cards:
+            if hal.update_card(card["card_number"], apb_state=0, apb_zone=None):
+                count += 1
+
+    # Log the bulk APB reset
+    hal.add_event(
+        7,  # APB_RESET
+        details=f"Bulk anti-passback reset: {count} cards"
+    )
+
+    return {
+        "success": True,
+        "cards_reset": count,
+        "message": f"Anti-passback state reset for {count} cards"
+    }
+
+
+# =============================================================================
+# Personnel/Card Holder History (UnityIS-compatible)
+# =============================================================================
+
+@app.get("/hal/cards/{card_number}/history", tags=["HAL Core - History"])
+async def hal_get_card_history(card_number: str, limit: int = 50):
+    """
+    Get event history for a card/personnel (UnityIS compatible)
+
+    Returns the most recent events for the specified card.
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    card = hal.get_card(card_number)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    # Get events for this card
+    if hasattr(hal, 'get_card_events'):
+        events = hal.get_card_events(card_number, limit=limit)
+    else:
+        # Fallback: filter events by card number
+        all_events = hal.get_events(limit=1000)
+        events = [e for e in all_events if e.get("card_number") == card_number][:limit]
+
+    return {
+        "card_number": card_number,
+        "holder_name": card.get("holder_name"),
+        "events": events,
+        "count": len(events)
+    }
+
+
+# =============================================================================
+# Device Status (UnityIS-compatible)
+# =============================================================================
+
+@app.get("/hal/device-status", tags=["HAL Core - Device Status"])
+async def hal_get_device_status(address: Optional[str] = None):
+    """
+    Get status of all devices (UnityIS compatible)
+
+    Returns status of drivers, controllers, sub-controllers and devices.
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    # Build device status response
+    doors = hal.get_all_doors()
+
+    devices = []
+    for door in doors:
+        door_id = door.get("door_id", 0)
+
+        # Skip if filtering by address
+        if address and str(door_id) != address:
+            continue
+
+        # Get reader mode (default to Card Only)
+        reader_mode = door.get("reader_mode", 5)
+
+        devices.append({
+            "address": str(door_id),
+            "description": door.get("name", f"Door {door_id}"),
+            "device_type": "reader",
+            "status": 1,  # Online
+            "reader_mode": reader_mode,
+            "reader_mode_name": READER_MODES.get(reader_mode, "Unknown"),
+            "door_status": 0,  # Closed
+            "lock_status": 0,  # Locked
+            "last_update": datetime.now().isoformat()
+        })
+
+    return {
+        "devices": devices,
+        "count": len(devices),
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+# =============================================================================
+# Alarm Management (UnityIS-compatible)
+# =============================================================================
+
+@app.get("/hal/alarms", tags=["HAL Core - Alarms"])
+async def hal_get_alarms(event_id: Optional[str] = None, limit: int = 500):
+    """
+    Get alarm events (UnityIS compatible)
+
+    Returns the most recent alarm transactions.
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    # Get events and filter for alarms
+    events = hal.get_events(limit=limit)
+
+    # Alarm event types
+    alarm_types = [1, 3, 4, 5, 6, 8]  # DENY, DOOR_FORCED, DOOR_HELD, TAMPER, APB_VIOLATION, EMERGENCY
+
+    # Filter by event_id if provided
+    event_ids = event_id.split(",") if event_id else None
+
+    alarms = []
+    for event in events:
+        event_type = event.get("event_type", 0)
+
+        if event_type in alarm_types:
+            if event_ids and str(event.get("event_id")) not in event_ids:
+                continue
+            alarms.append(event)
+
+    return {
+        "alarms": alarms,
+        "count": len(alarms),
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/hal/alarms/count", tags=["HAL Core - Alarms"])
+async def hal_get_alarm_count():
+    """
+    Get alarm count (UnityIS compatible)
+
+    Returns the total number of active alarms.
+    """
+    if not hal:
+        raise HTTPException(status_code=503, detail="HAL not initialized")
+
+    # Get events and count alarms
+    events = hal.get_events(limit=10000)
+
+    # Alarm event types
+    alarm_types = [1, 3, 4, 5, 6, 8]
+
+    count = sum(1 for e in events if e.get("event_type", 0) in alarm_types)
+
+    return {
+        "alarm_count": count,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+# =============================================================================
 # API v1 - Frontend I/O Control
 # =============================================================================
 
@@ -950,7 +1392,7 @@ async def websocket_endpoint(ws: WebSocket):
     try:
         await ws.send_json({
             "type": "connected",
-            "message": f"Connected to Azure Panel API v{VERSION}",
+            "message": f"Connected to Aether Bifrost API v{VERSION}",
             "hal_mode": "native" if HAL_AVAILABLE else "simulation",
             "timestamp": datetime.now().isoformat()
         })

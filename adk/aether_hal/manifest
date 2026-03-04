@@ -1,6 +1,6 @@
 {
   "Id": "aether_hal",
-  "Info": "Aether HAL - Hardware Abstraction Layer for Azure BLU-IC2",
+  "Info": "Aether HAL - Aether Bifrost API for Azure BLU-IC2",
   "EntryPoint": "/app/run.sh",
   "Ports": [8080],
   "Data": "/app/data",
