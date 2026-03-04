@@ -115,6 +115,16 @@ except ImportError as e:
     logger.warning(f"[WARN] Ambient.ai integration not available: {e}")
     AMBIENT_AVAILABLE = False
 
+# Import Aether Familiar (AI Development Assistant)
+try:
+    from familiar import AetherFamiliar, TOOLS
+    FAMILIAR_AVAILABLE = True
+    logger.info("[OK] Aether Familiar module loaded")
+except ImportError as e:
+    logger.warning(f"[WARN] Aether Familiar not available: {e}")
+    FAMILIAR_AVAILABLE = False
+    AetherFamiliar = None
+
 
 # =============================================================================
 # Configuration
@@ -179,6 +189,7 @@ async def lifespan(app: FastAPI):
     print(f"  Database: {HAL_DATABASE_PATH}")
     print(f"  HAL Mode: {'Native' if HAL_AVAILABLE else 'Simulation'}")
     print(f"  Ambient:  {'Enabled' if AMBIENT_AVAILABLE else 'Disabled'}")
+    print(f"  Familiar: {'Enabled' if FAMILIAR_AVAILABLE else 'Disabled'}")
     print("=" * 70)
 
     # Initialize HAL
@@ -1625,6 +1636,238 @@ async def event_broadcast_loop():
                 "type": "heartbeat",
                 "timestamp": datetime.now().isoformat()
             })
+
+
+# =============================================================================
+# Aether Familiar - AI Development Assistant
+# =============================================================================
+
+# Global Familiar instance
+familiar_instance: Optional[AetherFamiliar] = None
+
+
+class FamiliarChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=10000)
+    clear_history: bool = False
+
+
+class FamiliarChatResponse(BaseModel):
+    response: str
+    tools_used: List[str] = []
+    timestamp: str
+
+
+@app.get("/api/v1/familiar/status", tags=["Aether Familiar"])
+async def familiar_status():
+    """
+    Get Aether Familiar status
+
+    Returns whether the AI assistant is available and configured.
+    """
+    global familiar_instance
+
+    if not FAMILIAR_AVAILABLE:
+        return {
+            "available": False,
+            "message": "Familiar module not loaded",
+            "api_key_configured": False
+        }
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+    return {
+        "available": True,
+        "api_key_configured": bool(api_key),
+        "instance_active": familiar_instance is not None,
+        "model": familiar_instance.model if familiar_instance else "claude-sonnet-4-20250514",
+        "tools_count": len(TOOLS) if FAMILIAR_AVAILABLE else 0,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/v1/familiar/chat", response_model=FamiliarChatResponse, tags=["Aether Familiar"])
+async def familiar_chat(request: FamiliarChatRequest):
+    """
+    Chat with Aether Familiar
+
+    Send a message to the AI development assistant. The Familiar can:
+    - Execute bash commands
+    - Read/write/edit files
+    - Query AetherDB via Thrall
+    - Control doors
+    - Check system status
+    - View logs
+    - And more...
+    """
+    global familiar_instance
+
+    if not FAMILIAR_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Familiar not available")
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="ANTHROPIC_API_KEY not configured. Set it in environment variables."
+        )
+
+    # Initialize or get Familiar instance
+    if familiar_instance is None or request.clear_history:
+        try:
+            familiar_instance = AetherFamiliar(api_key=api_key)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to initialize Familiar: {str(e)}")
+
+    if request.clear_history and familiar_instance:
+        familiar_instance.clear_history()
+
+    try:
+        response = await familiar_instance.chat(request.message)
+        return FamiliarChatResponse(
+            response=response,
+            tools_used=[],  # Could track tools used if needed
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Familiar chat error: {e}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@app.post("/api/v1/familiar/clear", tags=["Aether Familiar"])
+async def familiar_clear_history():
+    """Clear Familiar conversation history"""
+    global familiar_instance
+
+    if familiar_instance:
+        familiar_instance.clear_history()
+
+    return {
+        "success": True,
+        "message": "Conversation history cleared",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/api/v1/familiar/tools", tags=["Aether Familiar"])
+async def familiar_list_tools():
+    """List available Familiar tools"""
+    if not FAMILIAR_AVAILABLE:
+        return {"tools": [], "count": 0}
+
+    tools_summary = []
+    for tool in TOOLS:
+        tools_summary.append({
+            "name": tool["name"],
+            "description": tool["description"]
+        })
+
+    return {
+        "tools": tools_summary,
+        "count": len(tools_summary)
+    }
+
+
+@app.websocket("/ws/familiar")
+async def familiar_websocket(ws: WebSocket):
+    """
+    WebSocket endpoint for streaming Familiar chat
+
+    Supports real-time streaming of responses and tool execution status.
+    """
+    global familiar_instance
+
+    await ws.accept()
+
+    if not FAMILIAR_AVAILABLE:
+        await ws.send_json({
+            "type": "error",
+            "message": "Familiar not available"
+        })
+        await ws.close()
+        return
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        await ws.send_json({
+            "type": "error",
+            "message": "ANTHROPIC_API_KEY not configured"
+        })
+        await ws.close()
+        return
+
+    # Initialize Familiar for this connection
+    try:
+        if familiar_instance is None:
+            familiar_instance = AetherFamiliar(api_key=api_key)
+    except Exception as e:
+        await ws.send_json({
+            "type": "error",
+            "message": f"Failed to initialize: {str(e)}"
+        })
+        await ws.close()
+        return
+
+    await ws.send_json({
+        "type": "connected",
+        "message": "Aether Familiar connected",
+        "timestamp": datetime.now().isoformat()
+    })
+
+    try:
+        while True:
+            data = await ws.receive_text()
+
+            try:
+                msg = json.loads(data)
+                msg_type = msg.get("type", "chat")
+
+                if msg_type == "ping":
+                    await ws.send_json({"type": "pong"})
+
+                elif msg_type == "clear":
+                    familiar_instance.clear_history()
+                    await ws.send_json({
+                        "type": "cleared",
+                        "message": "History cleared"
+                    })
+
+                elif msg_type == "chat":
+                    user_message = msg.get("message", "")
+                    if not user_message:
+                        continue
+
+                    await ws.send_json({
+                        "type": "thinking",
+                        "message": "Processing..."
+                    })
+
+                    try:
+                        # Stream response
+                        async for chunk in familiar_instance.chat_stream(user_message):
+                            await ws.send_json({
+                                "type": "chunk",
+                                "content": chunk
+                            })
+
+                        await ws.send_json({
+                            "type": "done",
+                            "timestamp": datetime.now().isoformat()
+                        })
+
+                    except Exception as e:
+                        await ws.send_json({
+                            "type": "error",
+                            "message": str(e)
+                        })
+
+            except json.JSONDecodeError:
+                await ws.send_json({
+                    "type": "error",
+                    "message": "Invalid JSON"
+                })
+
+    except WebSocketDisconnect:
+        pass
 
 
 # =============================================================================

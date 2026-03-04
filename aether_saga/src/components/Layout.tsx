@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { useState } from 'react';
+import { FamiliarChat, FamiliarButton } from './FamiliarChat';
 
 interface NavItem {
   path: string;
@@ -35,6 +36,7 @@ interface LayoutProps {
 export function Layout({ onLogout, children }: LayoutProps) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [familiarOpen, setFamiliarOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-aether-darker">
@@ -117,6 +119,13 @@ export function Layout({ onLogout, children }: LayoutProps) {
           {children || <Outlet />}
         </div>
       </main>
+
+      {/* Aether Familiar AI Assistant */}
+      {familiarOpen ? (
+        <FamiliarChat isOpen={familiarOpen} onClose={() => setFamiliarOpen(false)} />
+      ) : (
+        <FamiliarButton onClick={() => setFamiliarOpen(true)} />
+      )}
     </div>
   );
 }
