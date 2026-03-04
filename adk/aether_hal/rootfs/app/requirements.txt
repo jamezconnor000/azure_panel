@@ -1,0 +1,25 @@
+# Core dependencies
+PyYAML>=5.1
+cffi>=1.14.0
+click>=7.0
+colorama>=0.4.0
+
+# FastAPI and web server
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+pydantic>=2.0.0
+email-validator>=2.0.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
+
+# Database
+aiosqlite>=0.19.0
+
+# HTTP clients
+aiohttp>=3.8.0
+httpx>=0.24.0
+
+# Websockets
+websockets>=11.0

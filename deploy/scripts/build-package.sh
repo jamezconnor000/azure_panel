@@ -1,6 +1,7 @@
 #!/bin/bash
 #===============================================================================
-# Aether Access - Build Deployment Package
+# Aether HAL - Build Deployment Package
+# Hardware Abstraction Layer for Azure BLU-IC2 Controllers
 # Creates a distributable tar.gz package for Azure Panel deployment
 #===============================================================================
 
@@ -8,14 +9,15 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-BUILD_DIR="/tmp/aether-access-build"
+BUILD_DIR="/tmp/aether-hal-build"
 VERSION=$(cat "$SOURCE_DIR/VERSION" 2>/dev/null || echo "2.0.0")
-PACKAGE_NAME="aether-access-${VERSION}"
+PACKAGE_NAME="aether-hal-${VERSION}"
 OUTPUT_DIR="${1:-$SOURCE_DIR/deploy}"
 
 echo "==============================================================================="
-echo "                Building Aether Access Deployment Package"
-echo "                Version: $VERSION"
+echo "               Building Aether HAL Deployment Package"
+echo "         Hardware Abstraction Layer for Azure BLU-IC2 Controllers"
+echo "                         Version: $VERSION"
 echo "==============================================================================="
 echo ""
 
@@ -65,7 +67,8 @@ cp "$SOURCE_DIR/README.md" "$BUILD_DIR/$PACKAGE_NAME/docs/" 2>/dev/null || true
 # Create README for package
 cat > "$BUILD_DIR/$PACKAGE_NAME/README.txt" << EOF
 ===============================================================================
-                    AETHER ACCESS - DEPLOYMENT PACKAGE
+                    AETHER HAL - DEPLOYMENT PACKAGE
+          Hardware Abstraction Layer for Azure BLU-IC2 Controllers
                            Version: $VERSION
 ===============================================================================
 
@@ -96,6 +99,13 @@ Ambient.ai Integration:
   2. Add your AMBIENT_API_KEY
   3. Enable service: sudo systemctl enable aether-ambient-export
   4. Start service: sudo systemctl start aether-ambient-export
+
+Aether HAL Features:
+  - Event-driven architecture with 100K event buffer
+  - Local SQLite card database with 1M+ capacity
+  - OSDP/Wiegand/DESFire protocol support
+  - Offline operation capability
+  - REST API with real-time WebSocket updates
 
 Generated: $(date)
 ===============================================================================

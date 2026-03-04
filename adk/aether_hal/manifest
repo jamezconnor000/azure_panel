@@ -1,0 +1,12 @@
+{
+  "Id": "aether_hal",
+  "Info": "Aether HAL - Hardware Abstraction Layer for Azure BLU-IC2",
+  "EntryPoint": "/app/run.sh",
+  "Ports": [8080],
+  "Data": "/app/data",
+  "PFSData": "/app/pdata",
+  "ExclusiveMode": 0,
+  "Version": "2.0.0",
+  "WorkDir": "/app",
+  "User": "root"
+}
