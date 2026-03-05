@@ -6,7 +6,6 @@ import {
   UnifiedDashboard,
   People,
   Events,
-  Chronicle,
   Settings,
   Login,
 } from './pages';
@@ -45,7 +44,6 @@ function ProtectedRoutes() {
         <Route path="/" element={<UnifiedDashboard />} />
         <Route path="/people" element={<People />} />
         <Route path="/events" element={<Events />} />
-        <Route path="/chronicle" element={<Chronicle />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

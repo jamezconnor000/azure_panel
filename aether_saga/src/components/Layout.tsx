@@ -3,7 +3,7 @@
  */
 
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X, BookOpen } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { RunicShield, RunicPerson, RunicActivity, RunicSettings } from './RunicIcons';
 import { useState } from 'react';
 import { FamiliarChat, FamiliarButton } from './FamiliarChat';
@@ -19,7 +19,6 @@ const navItems: NavItem[] = [
   { path: '/', label: 'Command Center', icon: <RunicShield size={18} />, rune: 'ᛉ' },
   { path: '/people', label: 'People', icon: <RunicPerson size={18} />, rune: 'ᛗ' },
   { path: '/events', label: 'Events', icon: <RunicActivity size={18} />, rune: 'ᚱ' },
-  { path: '/chronicle', label: 'Chronicle', icon: <BookOpen size={18} />, rune: 'ᛋ' },
   { path: '/settings', label: 'Settings', icon: <RunicSettings size={18} />, rune: 'ᚲ' },
 ];
 
@@ -110,7 +109,7 @@ export function Layout({ onLogout, children }: LayoutProps) {
             </span>
           </div>
 
-          {navItems.slice(1, 4).map((item) => {
+          {navItems.slice(1, 3).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -143,7 +142,7 @@ export function Layout({ onLogout, children }: LayoutProps) {
             </span>
           </div>
 
-          {navItems.slice(4).map((item) => {
+          {navItems.slice(3).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
