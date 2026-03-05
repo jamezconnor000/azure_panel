@@ -5,5 +5,6 @@ export { People } from './People';
 export { AccessLevels } from './AccessLevels';
 export { Doors } from './Doors';
 export { Events } from './Events';
+export { Chronicle } from './Chronicle';
 export { Settings } from './Settings';
 export { Login } from './Login';
