@@ -1,0 +1,12 @@
+{
+  "Id": "aether_loom",
+  "Info": "Aether Loom - The Weaver of Code | Interactive code terminal for Aether Access 4.0",
+  "EntryPoint": "/app/run.sh",
+  "Ports": [6969],
+  "Data": "/app/data",
+  "PFSData": "/app/pdata",
+  "ExclusiveMode": 0,
+  "Version": "4.0.0",
+  "WorkDir": "/app",
+  "User": "root"
+}

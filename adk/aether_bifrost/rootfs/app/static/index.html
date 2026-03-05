@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether Bifrost - API Server</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent-primary: #58a6ff;
+            --accent-light: #79b8ff;
+            --accent-dark: #3b82f6;
+            --accent-muted: rgba(88, 166, 255, 0.15);
+            --success: #22c55e;
+            --success-muted: rgba(34, 197, 94, 0.15);
+            --danger: #ef4444;
+            --danger-muted: rgba(239, 68, 68, 0.15);
+            --warning: #f59e0b;
+            --warning-muted: rgba(245, 158, 11, 0.15);
+            --bg-base: #0d1117;
+            --bg-sidebar: #161b22;
+            --bg-card: #21262d;
+            --bg-elevated: #30363d;
+            --border-default: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #7d8590;
+            --text-muted: #484f58;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 48px 24px;
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-light), var(--accent-primary));
+        }
+        .logo { font-size: 48px; margin-bottom: 16px; color: var(--accent-primary); }
+        .title { font-size: 2.5rem; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+        .subtitle { color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 16px; }
+        .version-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: var(--accent-muted);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 20px;
+            color: var(--accent-primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .rune-footer {
+            margin-top: 20px;
+            font-family: 'Cinzel', serif;
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 4px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .stat-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+        .stat-value { font-size: 24px; font-weight: 600; color: var(--text-primary); }
+        .stat-value.online { color: var(--success); }
+        .stat-value.offline { color: var(--warning); }
+        .stat-value.error { color: var(--danger); }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-default);
+        }
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-muted);
+            color: var(--accent-primary);
+            font-size: 18px;
+        }
+        .card-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); }
+
+        /* Table */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-default);
+        }
+        .data-table td {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-default);
+        }
+        .data-table tbody tr:hover td { background: var(--bg-elevated); color: var(--text-primary); }
+
+        /* Links */
+        .link-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .link-item:hover {
+            background: var(--bg-elevated);
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+        .link-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .link-icon.blue { background: var(--accent-muted); color: var(--accent-primary); }
+        .link-icon.green { background: var(--success-muted); color: var(--success); }
+        .link-icon.orange { background: var(--warning-muted); color: var(--warning); }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 9999px;
+        }
+        .badge.ok { background: var(--success-muted); color: var(--success); }
+        .badge.warn { background: var(--warning-muted); color: var(--warning); }
+        .badge.error { background: var(--danger-muted); color: var(--danger); }
+
+        code {
+            background: var(--bg-base);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            color: var(--accent-primary);
+        }
+
+        /* Two column layout */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border-default);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Status indicator */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.offline { background: var(--warning); }
+        .status-dot.error { background: var(--danger); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">ᛒ</div>
+            <h1 class="title">Aether Bifrost</h1>
+            <p class="subtitle">The Bridge Between Realms • API Server</p>
+            <span class="version-badge">Version 2.0.0 • Port 8080</span>
+            <p class="rune-footer">ᛏᚺᛖ ᛗᚨᚲᚺᛁᚾᛖᛊ ᚨᚾᛊᚹᛖᚱ</p>
+        </header>
+
+        <!-- Status Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">HAL Status</div>
+                <div class="stat-value" id="hal-status"><span class="loading"></span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">WebSocket Clients</div>
+                <div class="stat-value" id="ws-clients"><span class="loading"></span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Cards</div>
+                <div class="stat-value" id="total-cards"><span class="loading"></span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Doors</div>
+                <div class="stat-value" id="active-doors"><span class="loading"></span></div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <!-- API Versions -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚡</div>
+                    <div class="card-title">API Versions</div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Version</th><th>Prefix</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="api-versions">
+                        <tr><td>HAL Core</td><td><code>/hal/</code></td><td><span class="loading"></span></td></tr>
+                        <tr><td>v1 - Frontend</td><td><code>/api/v1/</code></td><td><span class="loading"></span></td></tr>
+                        <tr><td>v2.1 - Auth</td><td><code>/api/v2.1/</code></td><td><span class="loading"></span></td></tr>
+                        <tr><td>v2.2 - OSDP</td><td><code>/api/v2.2/</code></td><td><span class="loading"></span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Documentation -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📚</div>
+                    <div class="card-title">Documentation</div>
+                </div>
+                <div class="link-grid">
+                    <a href="/docs" class="link-item">
+                        <div class="link-icon blue">📖</div>
+                        <span>Swagger UI</span>
+                    </a>
+                    <a href="/redoc" class="link-item">
+                        <div class="link-icon blue">📋</div>
+                        <span>ReDoc</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🔗</div>
+                <div class="card-title">Quick Links</div>
+            </div>
+            <div class="link-grid">
+                <a href="/health" class="link-item">
+                    <div class="link-icon green">💚</div>
+                    <span>Health Check</span>
+                </a>
+                <a href="/hal/stats" class="link-item">
+                    <div class="link-icon blue">📊</div>
+                    <span>HAL Statistics</span>
+                </a>
+                <a href="/hal/cards" class="link-item">
+                    <div class="link-icon blue">💳</div>
+                    <span>Card List</span>
+                </a>
+                <a href="/hal/doors" class="link-item">
+                    <div class="link-icon orange">🚪</div>
+                    <span>Door List</span>
+                </a>
+                <a href="/hal/access-levels" class="link-item">
+                    <div class="link-icon green">🔐</div>
+                    <span>Access Levels</span>
+                </a>
+                <a href="/api/v1/dashboard" class="link-item">
+                    <div class="link-icon blue">📈</div>
+                    <span>Dashboard Data</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Events -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📡</div>
+                <div class="card-title">Recent Events</div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Time</th><th>Type</th><th>Door</th><th>Card</th><th>Result</th></tr>
+                </thead>
+                <tbody id="recent-events">
+                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading events...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Ambient.ai Integration -->
+        <div class="card" style="border-color: var(--warning); border-width: 2px;">
+            <div class="card-header">
+                <div class="card-icon" style="background: var(--warning-muted); color: var(--warning);">☁️</div>
+                <div class="card-title">Ambient.ai Cloud Integration</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <!-- Status Panel -->
+                <div>
+                    <h4 style="color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">Connection Status</h4>
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <span class="status-dot" id="ambient-status-dot"></span>
+                        <span id="ambient-status-text" style="color: var(--text-secondary);">Checking...</span>
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        <p>API Key: <span id="ambient-api-key" style="font-family: monospace;">-</span></p>
+                        <p style="margin-top: 4px;">Source System: <span id="ambient-source-uid" style="font-family: monospace; font-size: 11px;">-</span></p>
+                    </div>
+
+                    <!-- Export Daemon Stats -->
+                    <h4 style="color: var(--text-secondary); margin: 16px 0 12px 0; font-size: 14px;">Export Daemon</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+                        <div style="background: var(--bg-elevated); padding: 8px; border-radius: 4px;">
+                            <div style="color: var(--text-muted);">Queued</div>
+                            <div style="font-weight: 600;" id="ambient-queued">-</div>
+                        </div>
+                        <div style="background: var(--bg-elevated); padding: 8px; border-radius: 4px;">
+                            <div style="color: var(--text-muted);">Sent</div>
+                            <div style="font-weight: 600; color: var(--success);" id="ambient-sent">-</div>
+                        </div>
+                        <div style="background: var(--bg-elevated); padding: 8px; border-radius: 4px;">
+                            <div style="color: var(--text-muted);">Failed</div>
+                            <div style="font-weight: 600; color: var(--danger);" id="ambient-failed">-</div>
+                        </div>
+                        <div style="background: var(--bg-elevated); padding: 8px; border-radius: 4px;">
+                            <div style="color: var(--text-muted);">Queue Size</div>
+                            <div style="font-weight: 600;" id="ambient-queue-size">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration Panel -->
+                <div>
+                    <h4 style="color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">Configure API Key</h4>
+                    <form id="ambient-config-form" style="display: flex; flex-direction: column; gap: 12px;">
+                        <input type="password" id="ambient-api-key-input" placeholder="Enter Ambient.ai API Key"
+                            style="padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-default);
+                            background: var(--bg-elevated); color: var(--text-primary); font-size: 14px;">
+                        <input type="text" id="ambient-source-uid-input" placeholder="Source System UID (optional)"
+                            style="padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-default);
+                            background: var(--bg-elevated); color: var(--text-primary); font-size: 14px;">
+                        <div style="display: flex; gap: 12px;">
+                            <button type="submit"
+                                style="flex: 1; padding: 10px 16px; border-radius: 6px; border: none;
+                                background: var(--warning); color: #000; font-weight: 600; cursor: pointer;">
+                                Save Configuration
+                            </button>
+                            <button type="button" id="ambient-test-btn"
+                                style="padding: 10px 16px; border-radius: 6px; border: 1px solid var(--border-default);
+                                background: var(--bg-elevated); color: var(--text-primary); cursor: pointer;">
+                                Test Connection
+                            </button>
+                        </div>
+                    </form>
+                    <div id="ambient-message" style="margin-top: 12px; padding: 10px; border-radius: 6px; display: none;"></div>
+
+                    <!-- Quick Actions -->
+                    <h4 style="color: var(--text-secondary); margin: 16px 0 12px 0; font-size: 14px;">Quick Actions</h4>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button id="ambient-sync-btn"
+                            style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-default);
+                            background: var(--bg-elevated); color: var(--text-primary); cursor: pointer; font-size: 13px;">
+                            🔄 Full Sync
+                        </button>
+                        <a href="/api/v1/ambient/status" class="link-item" style="padding: 8px 12px; text-decoration: none;">
+                            📊 Status API
+                        </a>
+                        <a href="/docs#/Ambient.ai%20Integration" class="link-item" style="padding: 8px 12px; text-decoration: none;">
+                            📖 API Docs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WebSocket -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🔌</div>
+                <div class="card-title">WebSocket</div>
+            </div>
+            <p style="color: var(--text-secondary);">Real-time event stream:</p>
+            <p style="margin-top: 8px;"><code>ws://localhost:8080/ws/live</code></p>
+            <p style="margin-top: 12px;">
+                <span class="status-dot" id="ws-status-dot"></span>
+                <span id="ws-status-text" style="color: var(--text-secondary);">Connecting...</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Fetch health data and update UI
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+
+                // Update HAL status
+                const halStatus = document.getElementById('hal-status');
+                if (data.hal && data.hal.status === 'healthy') {
+                    halStatus.innerHTML = '<span class="status-dot online"></span>Online';
+                    halStatus.className = 'stat-value online';
+                } else {
+                    halStatus.innerHTML = '<span class="status-dot offline"></span>Simulation';
+                    halStatus.className = 'stat-value offline';
+                }
+
+                // Update WS clients
+                document.getElementById('ws-clients').textContent = data.websocket_clients || 0;
+
+                // Update API versions table
+                const tbody = document.getElementById('api-versions');
+                tbody.innerHTML = `
+                    <tr><td>HAL Core</td><td><code>/hal/</code></td><td><span class="badge ${data.api_versions && data.api_versions['v2.2'] ? 'ok' : 'warn'}">${data.api_versions && data.api_versions['v2.2'] ? 'OK' : 'N/A'}</span></td></tr>
+                    <tr><td>v1 - Frontend</td><td><code>/api/v1/</code></td><td><span class="badge ok">OK</span></td></tr>
+                    <tr><td>v2.1 - Auth</td><td><code>/api/v2.1/</code></td><td><span class="badge ${data.api_versions && data.api_versions['v2.1'] ? 'ok' : 'warn'}">${data.api_versions && data.api_versions['v2.1'] ? 'OK' : 'N/A'}</span></td></tr>
+                    <tr><td>v2.2 - OSDP</td><td><code>/api/v2.2/</code></td><td><span class="badge ${data.api_versions && data.api_versions['v2.2'] ? 'ok' : 'warn'}">${data.api_versions && data.api_versions['v2.2'] ? 'OK' : 'N/A'}</span></td></tr>
+                `;
+            } catch (e) {
+                document.getElementById('hal-status').innerHTML = '<span class="status-dot error"></span>Error';
+                document.getElementById('hal-status').className = 'stat-value error';
+            }
+        }
+
+        // Fetch stats
+        async function fetchStats() {
+            try {
+                const res = await fetch('/hal/stats');
+                const data = await res.json();
+                document.getElementById('total-cards').textContent = data.total_cards || 0;
+                document.getElementById('active-doors').textContent = data.total_doors || 0;
+            } catch (e) {
+                document.getElementById('total-cards').textContent = '-';
+                document.getElementById('active-doors').textContent = '-';
+            }
+        }
+
+        // Fetch recent events
+        async function fetchEvents() {
+            try {
+                const res = await fetch('/hal/events?limit=5');
+                const data = await res.json();
+                const tbody = document.getElementById('recent-events');
+
+                if (data.events && data.events.length > 0) {
+                    tbody.innerHTML = data.events.map(e => `
+                        <tr>
+                            <td>${new Date(e.timestamp * 1000).toLocaleTimeString()}</td>
+                            <td>${e.event_type || 'access'}</td>
+                            <td>${e.door_id || '-'}</td>
+                            <td>${e.card_number || '-'}</td>
+                            <td><span class="badge ${e.granted ? 'ok' : 'error'}">${e.granted ? 'Granted' : 'Denied'}</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No recent events</td></tr>';
+                }
+            } catch (e) {
+                document.getElementById('recent-events').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Unable to load events</td></tr>';
+            }
+        }
+
+        // WebSocket connection
+        function connectWebSocket() {
+            const dot = document.getElementById('ws-status-dot');
+            const text = document.getElementById('ws-status-text');
+
+            try {
+                const ws = new WebSocket(`ws://${window.location.host}/ws/live`);
+
+                ws.onopen = () => {
+                    dot.className = 'status-dot online';
+                    text.textContent = 'Connected';
+                };
+
+                ws.onclose = () => {
+                    dot.className = 'status-dot offline';
+                    text.textContent = 'Disconnected - Reconnecting...';
+                    setTimeout(connectWebSocket, 3000);
+                };
+
+                ws.onerror = () => {
+                    dot.className = 'status-dot error';
+                    text.textContent = 'Connection Error';
+                };
+
+                ws.onmessage = (event) => {
+                    // Refresh events on new message
+                    fetchEvents();
+                };
+            } catch (e) {
+                dot.className = 'status-dot error';
+                text.textContent = 'WebSocket not available';
+            }
+        }
+
+        // Ambient.ai Integration
+        async function fetchAmbientStatus() {
+            const dot = document.getElementById('ambient-status-dot');
+            const text = document.getElementById('ambient-status-text');
+
+            try {
+                const res = await fetch('/api/v1/ambient/status');
+                const data = await res.json();
+
+                if (data.configured && data.enabled) {
+                    dot.className = 'status-dot online';
+                    text.textContent = 'Connected';
+                } else if (data.enabled === false && !data.message) {
+                    dot.className = 'status-dot offline';
+                    text.textContent = 'Not Configured';
+                } else {
+                    dot.className = 'status-dot offline';
+                    text.textContent = data.message || 'Disabled';
+                }
+
+                // Update stats
+                document.getElementById('ambient-api-key').textContent = data.api_key_masked || 'Not set';
+                document.getElementById('ambient-source-uid').textContent = data.source_system_uid || '-';
+
+                if (data.export_daemon) {
+                    document.getElementById('ambient-queued').textContent = data.export_daemon.events_queued || 0;
+                    document.getElementById('ambient-sent').textContent = data.export_daemon.events_sent || 0;
+                    document.getElementById('ambient-failed').textContent = data.export_daemon.events_failed || 0;
+                    document.getElementById('ambient-queue-size').textContent = data.export_daemon.queue_size || 0;
+                }
+            } catch (e) {
+                dot.className = 'status-dot error';
+                text.textContent = 'Error loading status';
+            }
+        }
+
+        function showAmbientMessage(message, isError = false) {
+            const el = document.getElementById('ambient-message');
+            el.style.display = 'block';
+            el.style.background = isError ? 'var(--danger-muted)' : 'var(--success-muted)';
+            el.style.color = isError ? 'var(--danger)' : 'var(--success)';
+            el.textContent = message;
+            setTimeout(() => { el.style.display = 'none'; }, 5000);
+        }
+
+        // Configure API Key
+        document.getElementById('ambient-config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('ambient-api-key-input').value;
+            const sourceUid = document.getElementById('ambient-source-uid-input').value;
+
+            if (!apiKey) {
+                showAmbientMessage('Please enter an API key', true);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/ambient/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        source_system_uid: sourceUid || null
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAmbientMessage('API key configured successfully!');
+                    document.getElementById('ambient-api-key-input').value = '';
+                    fetchAmbientStatus();
+                } else {
+                    showAmbientMessage(data.message || 'Configuration failed', true);
+                }
+            } catch (e) {
+                showAmbientMessage('Failed to configure: ' + e.message, true);
+            }
+        });
+
+        // Test Connection
+        document.getElementById('ambient-test-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('ambient-test-btn');
+            btn.textContent = 'Testing...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/v1/ambient/test', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.connected) {
+                    showAmbientMessage('Connection verified! ' + data.alarms_synced + ' alarm types synced.');
+                } else {
+                    showAmbientMessage(data.message || 'Connection failed', true);
+                }
+            } catch (e) {
+                showAmbientMessage('Test failed: ' + e.message, true);
+            }
+
+            btn.textContent = 'Test Connection';
+            btn.disabled = false;
+            fetchAmbientStatus();
+        });
+
+        // Full Sync
+        document.getElementById('ambient-sync-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('ambient-sync-btn');
+            btn.textContent = '🔄 Syncing...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/v1/ambient/sync', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAmbientMessage('Full sync completed successfully!');
+                } else {
+                    showAmbientMessage(data.message || 'Sync failed', true);
+                }
+            } catch (e) {
+                showAmbientMessage('Sync failed: ' + e.message, true);
+            }
+
+            btn.textContent = '🔄 Full Sync';
+            btn.disabled = false;
+            fetchAmbientStatus();
+        });
+
+        // Initial load
+        fetchHealth();
+        fetchStats();
+        fetchEvents();
+        fetchAmbientStatus();
+        connectWebSocket();
+
+        // Refresh every 10 seconds
+        setInterval(() => {
+            fetchHealth();
+            fetchStats();
+            fetchEvents();
+            fetchAmbientStatus();
+        }, 10000);
+    </script>
+</body>
+</html>

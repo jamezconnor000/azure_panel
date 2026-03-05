@@ -1,0 +1,12 @@
+{
+  "Id": "aether_familiar",
+  "Info": "Aether Familiar - AI Assistant | Monitors and interfaces with all Aether apps",
+  "EntryPoint": "/app/run.sh",
+  "Ports": [8765],
+  "Data": "/app/data",
+  "PFSData": "/app/pdata",
+  "ExclusiveMode": 0,
+  "Version": "4.0.0",
+  "WorkDir": "/app",
+  "User": "root"
+}
